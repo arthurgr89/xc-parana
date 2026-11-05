@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>XC Paraná 2026 Beta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:ital,wght@0,600;0,800;1,800&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root{
+    --noite:#071a2e; --escudo:#0d2b45; --escudo-2:#123a5a; --lago:#19a7a4; --vela:#8fd640; --sol:#f5b52e;
+    --neve:#e8f6f6; --nevoa:#9fb8c8; --linha:rgba(159,184,200,.2); --perigo:#ff6b6b; --rosa:#ff7eb6;
+    --display:'Saira Condensed','Arial Narrow',Arial,sans-serif; --corpo:'Source Sans 3','Segoe UI',Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:var(--corpo); color:var(--neve); font-size:16px; line-height:1.45; min-height:100vh;
+    background:radial-gradient(120% 50% at 50% -10%, #134a6b 0%, transparent 60%), linear-gradient(180deg,var(--noite),#04111f);
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+  .wrap{max-width:980px; margin:0 auto; padding:18px 16px 70px}
+  button{font-family:inherit}
+  :focus-visible{outline:3px solid var(--lago); outline-offset:2px}
+
+  header{display:flex; align-items:center; gap:16px; padding:6px 0 14px}
+  header img{width:86px; height:auto; aspect-ratio:228/296; object-fit:cover; object-position:50% 18%; flex:none; filter:drop-shadow(0 8px 18px rgba(0,0,0,.45))}
+  header h1{font-family:var(--display); font-weight:800; font-style:italic; font-size:clamp(30px,6vw,44px); line-height:1; margin:0}
+  header p{color:var(--nevoa); font-size:15px; margin:4px 0 0}
+
+  .categorias{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:6px 0 12px}
+  .categorias button{background:var(--escudo); color:var(--nevoa); border:1px solid var(--linha); border-radius:12px; padding:10px 8px; cursor:pointer; text-align:left}
+  .categorias b{display:block; font-family:var(--display); font-weight:800; font-style:italic; font-size:22px; color:var(--neve); line-height:1}
+  .categorias span{font-size:13px}
+  .categorias button[aria-pressed="true"]{background:var(--escudo-2); border-color:var(--vela); box-shadow:inset 0 -3px 0 var(--vela)}
+  .categorias button[aria-pressed="true"] b{color:var(--vela)}
+
+  .visoes{display:flex; gap:4px; border-bottom:1px solid var(--linha); margin-bottom:12px; overflow-x:auto; scrollbar-width:none}
+  .visoes button{white-space:nowrap; background:none; border:0; color:var(--nevoa); font-weight:600; font-size:16px; padding:10px 12px; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-1px}
+  .visoes button[aria-selected="true"]{color:var(--neve); border-bottom-color:var(--vela)}
+  .visao{display:none} .visao.ativa{display:block}
+
+  table{width:100%; border-collapse:collapse}
+  .tabela{background:var(--escudo); border:1px solid var(--linha); border-radius:14px; overflow-x:auto}
+  .so-celular{display:none}
+  th{font-weight:600; font-size:13px; color:var(--nevoa); text-align:left; padding:10px 12px; background:var(--escudo-2)}
+  td{padding:11px 12px; border-top:1px solid var(--linha)}
+  .num{text-align:right; font-variant-numeric:tabular-nums}
+  .pos{width:44px; text-align:center; font-family:var(--display); font-weight:800; font-size:19px; color:var(--nevoa)}
+  .pos .med{font-size:20px}
+  .nome{font-weight:700}
+  .nome.f{color:var(--rosa)}
+  .cat{color:var(--nevoa); font-size:14px}
+  .total{font-family:var(--display); font-weight:800; font-style:italic; font-size:21px}
+  tr.piloto{cursor:pointer}
+  tr.piloto:hover > td{background:rgba(25,167,164,.07)}
+  tr.piloto[aria-expanded="true"] > td{background:var(--escudo-2)}
+  .seta{display:inline-block; transition:transform .15s; color:var(--nevoa); margin-left:6px}
+  tr[aria-expanded="true"] .seta{transform:rotate(90deg)}
+  tr.detalhe > td{padding:0 0 12px; background:var(--escudo-2); border-top:0}
+  .ver-fora{background:none; border:0; color:var(--vela); font-weight:600; cursor:pointer; padding:8px 12px 0; font-size:14px}
+  .voos tr.fora{display:none} .voos.mostra-fora tr.fora{display:table-row}
+  .voos{width:calc(100% - 24px); margin:0 12px; background:var(--noite); border-radius:10px; overflow:hidden}
+  .voos th{background:none; font-size:12.5px; padding:8px 10px}
+  .voos td{padding:8px 10px; font-size:14.5px}
+  .voos tr.voo{cursor:pointer}
+  .voos tr.voo:hover td{background:rgba(143,214,64,.08)}
+  .voos tr.fora td{color:var(--nevoa); opacity:.65}
+  .etq{display:inline-block; font-size:12px; font-weight:700; padding:2px 8px; border-radius:999px; background:rgba(25,167,164,.18); color:var(--lago); white-space:nowrap}
+  .etq.fai{background:rgba(245,181,46,.18); color:var(--sol)}
+  .etq.triangulo{background:rgba(143,214,64,.15); color:var(--vela)}
+  .mapa-link{color:var(--vela); font-weight:600; white-space:nowrap}
+  .nota{color:var(--nevoa); font-size:13.5px; margin:8px 12px 0}
+  .vazio{padding:30px 16px; text-align:center; color:var(--nevoa)}
+  .mais{display:block; margin:12px auto 0; background:none; border:1px solid var(--linha); color:var(--neve); border-radius:10px; padding:10px 18px; cursor:pointer; font-weight:600}
+
+  .records{display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:10px}
+  .record{background:var(--escudo); border:1px solid var(--linha); border-radius:14px; padding:14px 16px; position:relative}
+  .record h3{margin:0; font-size:15px; color:var(--nevoa); font-weight:600}
+  .record .km{font-family:var(--display); font-weight:800; font-style:italic; font-size:38px; line-height:1.05}
+  .record .km small{font-size:18px; color:var(--nevoa); font-style:normal}
+  .record p{margin:2px 0 0; font-size:14.5px}
+  .record .data{color:var(--nevoa); font-size:13.5px}
+  .record.novo{border-color:var(--vela)}
+  .record.novo::after{content:"Novo record"; position:absolute; top:12px; right:12px; font-size:12px; font-weight:700; color:#0a2208; background:var(--vela); padding:2px 8px; border-radius:999px}
+  .record.clicavel{cursor:pointer}
+
+  /* modal do mapa */
+  dialog{width:min(920px,96vw); max-height:94vh; padding:0; border:1px solid var(--linha); border-radius:16px; background:var(--escudo); color:var(--neve)}
+  dialog::backdrop{background:rgba(2,8,16,.75)}
+  .modal-topo{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; padding:14px 16px}
+  .modal-topo h2{margin:0; font-family:var(--display); font-weight:800; font-style:italic; font-size:24px; line-height:1.1}
+  .modal-topo p{margin:2px 0 0; color:var(--nevoa); font-size:14.5px}
+  .fechar{background:none; border:1px solid var(--linha); color:var(--neve); border-radius:10px; font-size:20px; width:40px; height:40px; cursor:pointer; flex:none}
+  #mapa{height:min(60vh,540px)}
+  .faixa{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); border-top:1px solid var(--linha)}
+  .faixa div{padding:10px 14px; box-shadow:0 0 0 .5px var(--linha)}
+  .faixa dt{color:var(--nevoa); font-size:13px} .faixa dd{margin:0; font-family:var(--display); font-weight:600; font-size:20px}
+
+  .painel{background:var(--escudo); border:1px solid var(--linha); border-radius:16px; padding:20px; margin-bottom:14px}
+  .painel h2{font-family:var(--display); font-weight:800; font-size:24px; margin:0 0 4px}
+  .painel .dica{color:var(--nevoa); margin:0 0 14px; font-size:15px}
+
+  .painel label{display:block; font-weight:600; font-size:15px; margin:14px 0 6px}
+  input[type=text],input[type=password]{width:100%; font:16px var(--corpo); color:var(--neve); background:var(--noite); border:1px solid var(--linha); border-radius:10px; padding:12px 14px}
+  input:focus-visible, button:focus-visible, .zona:focus-visible{outline:3px solid var(--lago); outline-offset:2px}
+  .pin{font-family:var(--display); font-size:26px; letter-spacing:.5em; text-align:center; max-width:220px}
+  .pins{display:flex; gap:10px; flex-wrap:wrap}
+
+  .combo{position:relative}
+  .lista{position:absolute; left:0; right:0; top:calc(100% + 4px); background:var(--noite); border:1px solid var(--linha); border-radius:10px; max-height:260px; overflow:auto; z-index:1000; display:none}
+  .lista.aberta{display:block}
+  .lista div{padding:10px 14px; cursor:pointer; display:flex; justify-content:space-between; gap:10px}
+  .lista div:hover,.lista div.foco{background:var(--escudo-2)}
+  .lista small{color:var(--nevoa)}
+
+  .aviso{margin-top:12px; padding:12px 14px; border-radius:10px; background:var(--noite); border:1px solid var(--linha); color:var(--nevoa); font-size:15px; display:none}
+  .aviso.mostra{display:block}
+  .aviso.ok{border-color:var(--vela); color:var(--vela)}
+  .aviso.erro{border-color:var(--perigo); color:var(--perigo)}
+
+  .zona{margin-top:14px; border:2px dashed var(--linha); border-radius:14px; padding:26px 16px; text-align:center; cursor:pointer; transition:border-color .15s, background .15s}
+  .zona:hover,.zona.arrastando{border-color:var(--lago); background:rgba(25,167,164,.07)}
+  .zona strong{display:block; font-size:17px}
+  .zona span{color:var(--nevoa); font-size:14px}
+  .zona.tem-arquivo{border-style:solid; border-color:var(--lago)}
+  .zona input{display:none}
+  .arquivos-lista{list-style:none; margin:10px 0 0; padding:0; color:var(--nevoa); font-size:13.5px; max-height:150px; overflow:auto}
+  .arquivos-lista li{padding:2px 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .lote{background:var(--escudo); border:1px solid var(--linha); border-radius:14px; overflow:hidden; margin-bottom:14px}
+  .lote h3{margin:0; padding:12px 14px; font-size:16px; border-bottom:1px solid var(--linha)}
+  .lote ol{list-style:none; margin:0; padding:0}
+  .lote li{display:grid; grid-template-columns:28px 1fr auto; gap:4px 10px; align-items:center; padding:10px 14px; border-top:1px solid var(--linha)}
+  .lote li:first-child{border-top:0}
+  .lote li.clicavel{cursor:pointer} .lote li.clicavel:hover{background:rgba(143,214,64,.07)}
+  .lote li.ativo{background:var(--escudo-2)}
+  .lote .ic{font-size:18px; text-align:center}
+  .lote .arq{font-size:13px; color:var(--nevoa); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .lote .info{min-width:0}
+  .lote .pts{font-family:var(--display); font-weight:800; font-style:italic; font-size:20px; white-space:nowrap}
+  .lote .msg-erro{color:var(--perigo); font-size:14px}
+  .lote .msg-ea{color:var(--perigo); font-size:14px}
+
+  .btn{display:block; width:100%; margin-top:16px; font:700 17px var(--corpo); border:0; border-radius:12px; padding:14px; cursor:pointer; background:var(--vela); color:#0a2208}
+  .btn:hover{filter:brightness(1.08)}
+  .btn:disabled{background:var(--linha); color:var(--nevoa); cursor:not-allowed; filter:none}
+  .btn.contorno{background:none; color:var(--neve); border:1px solid var(--linha); font-weight:600; font-size:15px; padding:11px}
+  .btn.contorno:hover{border-color:var(--lago)}
+
+  /* ---------- resultado ---------- */
+  .resultado{display:none} .resultado.mostra{display:block}
+  .placar{display:grid; grid-template-columns:1fr auto; align-items:end; gap:4px 16px; padding:18px 20px; border-radius:16px;
+    background:linear-gradient(135deg, var(--escudo-2), var(--escudo)); border:1px solid var(--linha); margin-bottom:14px}
+  .placar .tipo{font-family:var(--display); font-weight:800; font-style:italic; font-size:22px; color:var(--vela); margin:0}
+  .placar .local{color:var(--nevoa); margin:0; font-size:15px}
+  .placar .pontos{grid-row:1 / span 2; grid-column:2; text-align:right; font-family:var(--display); font-weight:800; font-style:italic; line-height:.9}
+  .placar .pontos b{display:block; font-size:clamp(46px,11vw,68px); color:var(--neve)}
+  .placar .pontos small{display:block; margin-top:6px; font-size:16px; color:var(--nevoa); font-style:normal; font-weight:600}
+  @media (max-width:520px){
+    .placar{grid-template-columns:1fr}
+    .placar .pontos{grid-row:auto; grid-column:auto; text-align:left; order:-1; margin-bottom:6px}
+  }
+  .placar.anulado .pontos b{color:var(--nevoa); text-decoration:line-through; text-decoration-color:var(--perigo)}
+  .selo{display:inline-block; margin-bottom:10px; padding:5px 12px; border-radius:999px; font-weight:700; font-size:14px}
+  .selo.ok{background:rgba(143,214,64,.15); color:var(--vela)}
+  .selo.info{background:rgba(25,167,164,.15); color:var(--lago)}
+  .selo.erro{background:rgba(255,107,107,.15); color:var(--perigo)}
+
+  .medidas{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); background:var(--escudo); border:1px solid var(--linha); border-radius:14px; overflow:hidden; margin:0 0 14px}
+  .medidas div{padding:12px 14px; box-shadow:0 0 0 .5px var(--linha)}
+  .medidas dt{color:var(--nevoa); font-size:14px}
+  .medidas dd{margin:0; font-family:var(--display); font-weight:600; font-size:22px}
+
+  .ea{padding:14px 16px; border-radius:14px; margin-bottom:14px; border:1px solid var(--vela); background:rgba(143,214,64,.07)}
+  .ea.invadido{border-color:var(--perigo); background:rgba(255,107,107,.08)}
+  .ea h3{margin:0 0 4px; font-size:17px}
+  .ea p{margin:4px 0 0; color:var(--nevoa); font-size:15px}
+  .ea ul{margin:8px 0 0; padding-left:20px}
+
+  .mapa{height:min(62vh,520px); border-radius:16px; overflow:hidden; border:1px solid var(--linha); background:var(--escudo)}
+  .legenda{display:flex; flex-wrap:wrap; gap:6px 16px; color:var(--nevoa); font-size:14px; margin:8px 2px 0}
+  .legenda i{display:inline-block; width:22px; height:4px; border-radius:2px; vertical-align:middle; margin-right:6px}
+
+
+  /* navegação principal */
+  .principal{display:flex; gap:6px; background:var(--escudo); border:1px solid var(--linha); border-radius:14px; padding:5px; margin:4px 0 16px}
+  .principal button{flex:1; font:600 16px var(--corpo); color:var(--nevoa); background:none; border:0; border-radius:10px; padding:11px 6px; cursor:pointer}
+  .principal button[aria-selected="true"]{background:var(--escudo-2); color:var(--neve); box-shadow:inset 0 -3px 0 var(--vela)}
+  .pagina{display:none} .pagina.ativa{display:block}
+  #p-enviar, #p-verificar{max-width:760px; margin:0 auto}
+  .info-temporada{display:flex; flex-wrap:wrap; gap:4px 14px; align-items:center; color:var(--nevoa); font-size:14px; margin:0 0 10px}
+  .info-temporada select{font:600 14px var(--corpo); color:var(--neve); background:var(--escudo); border:1px solid var(--linha); border-radius:8px; padding:4px 8px}
+  .cta{margin-left:auto; display:inline-flex; align-items:center; gap:10px; flex:none;
+    font-family:var(--display); font-weight:800; font-style:italic; font-size:26px; line-height:1; letter-spacing:.01em;
+    color:#0a2208; text-decoration:none; padding:16px 28px; border-radius:16px;
+    background:linear-gradient(180deg,#b2ee68 0%, var(--vela) 55%, #74b932 100%);
+    box-shadow:0 0 0 3px rgba(143,214,64,.25), 0 10px 28px rgba(143,214,64,.35), inset 0 -3px 0 rgba(0,0,0,.18);
+    transition:transform .15s, box-shadow .15s}
+  .cta:hover{transform:translateY(-2px); box-shadow:0 0 0 4px rgba(143,214,64,.35), 0 14px 34px rgba(143,214,64,.45), inset 0 -3px 0 rgba(0,0,0,.18)}
+  .cta:active{transform:translateY(0)}
+  .cta[aria-current="page"]{box-shadow:0 0 0 3px rgba(143,214,64,.6), inset 0 -3px 0 rgba(0,0,0,.18)}
+  .mais[hidden]{display:none}
+  .conexao{display:inline-flex; align-items:center; gap:7px; margin-top:8px; padding:3px 11px 3px 9px; border-radius:999px;
+    font-size:12.5px; font-weight:700; letter-spacing:.06em; color:var(--nevoa); background:rgba(7,26,46,.55); border:1px solid var(--linha)}
+  .conexao i{width:8px; height:8px; border-radius:50%; background:var(--nevoa)}
+  .conexao.on{color:var(--vela); border-color:rgba(143,214,64,.35)} .conexao.on i{background:var(--vela); box-shadow:0 0 0 3px rgba(143,214,64,.18)}
+  .conexao.off{color:var(--perigo); border-color:rgba(255,107,107,.5)} .conexao.off i{background:var(--perigo)}
+  .modo-salvo tr.voo{cursor:default}
+  .zona-perigo{border-color:rgba(255,107,107,.5)}
+  .zona-perigo h2{color:var(--perigo)}
+  .btn.perigo{background:none; border:2px solid var(--perigo); color:var(--perigo)}
+  .btn.perigo:hover{background:rgba(255,107,107,.1); filter:none}
+  .rec-novo{color:var(--vela); font-weight:700} .rec-mudou{color:var(--sol); font-weight:700} .rec-igual{color:var(--nevoa)}
+  .status-temp{background:var(--noite); border-radius:10px; padding:10px 14px; margin:8px 0 0; font-size:14.5px}
+  .nota-topo{color:var(--nevoa); font-size:14.5px; margin:0 2px 10px}
+  .motivo{color:var(--perigo); font-size:14.5px}
+  .riscado{text-decoration:line-through; text-decoration-color:var(--perigo); color:var(--nevoa)}
+
+  /* área do organizador */
+  #p-admin{max-width:980px}
+  .adm-topo{display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; justify-content:space-between; margin-bottom:12px; color:var(--nevoa)}
+  .adm-form{display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:10px; align-items:end}
+  .adm-form .btn{margin:0; width:auto; padding:12px 20px}
+  .painel select, .adm-filtros select, .adm-filtros input, .tabela select{font:15px var(--corpo); color:var(--neve); background:var(--noite); border:1px solid var(--linha); border-radius:10px; padding:11px 10px}
+  .tabela select{padding:6px 8px; font-size:14px}
+  .adm-filtros{display:flex; flex-wrap:wrap; gap:10px; margin:0 0 10px}
+  .adm-filtros input{flex:1; min-width:200px}
+  .acao{background:none; border:1px solid var(--linha); color:var(--neve); border-radius:8px; padding:6px 10px; font-weight:600; font-size:13.5px; cursor:pointer; white-space:nowrap}
+  .acao:hover{border-color:var(--lago)}
+  .acao.perigo{color:var(--perigo); border-color:rgba(255,107,107,.45)}
+  .acao.perigo:hover{border-color:var(--perigo)}
+  .acoes{display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end}
+  .estado{font-size:13.5px; font-weight:700}
+  .estado.ok{color:var(--vela)} .estado.e-ea{color:var(--perigo)} .estado.anulado{color:var(--sol)}
+  .rodape a{color:var(--nevoa)}
+  .previa-resumo{display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 10px}
+  .previa-resumo span{background:var(--noite); border:1px solid var(--linha); border-radius:999px; padding:4px 12px; font-size:14px}
+  .previa-lista{background:var(--noite); border-radius:10px; padding:10px 14px; margin:0 0 10px; font-size:14px; max-height:220px; overflow:auto}
+  .previa-lista h4{margin:6px 0 4px; font-size:14px; color:var(--nevoa)}
+  .previa-lista ul{margin:0; padding-left:18px}
+  .previa-lista .de{color:var(--nevoa); text-decoration:line-through}
+  .painel .marcar{display:flex; gap:8px; align-items:flex-start; font-size:14.5px; font-weight:400; margin:6px 0 0}
+  .selo-ativa{display:inline-block; background:rgba(143,214,64,.15); color:var(--vela); font-size:12.5px; font-weight:700; padding:2px 10px; border-radius:999px}
+  @media (max-width:640px){ .adm-form{grid-template-columns:1fr 1fr} .adm-form .nome-novo{grid-column:1 / -1} .adm-form .btn{grid-column:1 / -1} }
+  button.cta{border:0; cursor:pointer}
+  .cta-largo{display:flex; width:100%; justify-content:center; margin:0 0 14px}
+  .beta{display:inline-block; vertical-align:middle; font-family:var(--corpo); font-style:normal; font-weight:700; font-size:14px; letter-spacing:.02em;
+    color:var(--sol); border:1.5px solid var(--sol); border-radius:999px; padding:3px 10px; margin-left:4px; transform:translateY(-4px)}
+  .rodape{text-align:center; color:var(--nevoa); font-size:13px; margin-top:26px}
+
+  @media (max-width:640px){
+    header img{width:64px}
+    .categorias{grid-template-columns:repeat(2,1fr)}
+    .esconde-celular{display:none}
+    .so-celular{display:inline}
+    header{flex-wrap:wrap}
+    header > div{flex:1; min-width:0}
+    header h1{font-size:30px}
+    .cta{order:3; width:100%; justify-content:center; margin:6px 0 0; font-size:24px; padding:15px}
+    .principal button{font-size:14.5px; padding:10px 4px}
+    .voos{width:calc(100% - 12px); margin:0 6px}
+    td,th{padding-left:8px; padding-right:8px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="https://raw.githubusercontent.com/arthurgr89/logos-parapente/main/CXP/2026%20SF%20-%20refuzido.png" alt="XC Paraná" width="300" height="450">
+    <div>
+      <h1>XC Paraná 2026 <span class="beta">Beta</span></h1>
+      <p>Ranking, envio de voos e verificação de espaço aéreo.</p>
+      <span class="conexao" id="conexao" role="status" aria-live="polite" title="Verificando a conexão com o servidor"><i></i><span>Verificando…</span></span>
+    </div>
+    <a class="cta" href="#enviar" id="ctaEnviar">
+      <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M12 3v12M6.5 8.5 12 3l5.5 5.5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Enviar voo
+    </a>
+  </header>
+
+  <nav class="principal" role="tablist" aria-label="Seções">
+    <button role="tab" aria-selected="true" data-pag="ranking">Ranking</button>
+    <button role="tab" aria-selected="false" data-pag="verificar"><span class="esconde-celular">Verificar espaço aéreo</span><span class="so-celular">Espaço aéreo</span></button>
+  </nav>
+
+  <!-- ================= RANKING ================= -->
+  <section class="pagina ativa" id="p-ranking">
+  <div class="info-temporada">
+    <label>Temporada <select id="temporada"></select></label>
+    <span id="inscritos"></span><span id="atualizado"></span>
+  </div>
+  <div class="categorias" role="group" aria-label="Categoria">
+    <button data-cat="OPEN" aria-pressed="true"><b>Open</b><span id="n-OPEN">–</span></button>
+    <button data-cat="SPORT" aria-pressed="false"><b>Sport</b><span id="n-SPORT">–</span></button>
+    <button data-cat="LITE" aria-pressed="false"><b>Lite</b><span id="n-LITE">–</span></button>
+    <button data-cat="FEMININO" aria-pressed="false"><b>Feminino</b><span id="n-FEMININO">–</span></button>
+  </div>
+
+  <div class="visoes" role="tablist">
+    <button role="tab" aria-selected="true" data-visao="ranking">Tabela geral</button>
+    <button role="tab" aria-selected="false" data-visao="top">Top voos</button>
+    <button role="tab" aria-selected="false" data-visao="records">Records</button>
+    <button role="tab" aria-selected="false" data-visao="excluidos">Voos excluídos</button>
+  </div>
+
+  <section class="visao ativa" id="v-ranking"><div class="tabela" id="tabRanking"><div class="vazio">Carregando…</div></div></section>
+  <section class="visao" id="v-top"><div class="tabela" id="tabTop"></div><button class="mais" id="maisTop" hidden>Mostrar mais voos</button></section>
+  <section class="visao" id="v-records"><div class="records" id="gradeRecords"></div></section>
+  <section class="visao" id="v-excluidos">
+    <p class="nota-topo">Voos enviados que não contam no ranking, com o motivo. Toque em um voo para ver onde aconteceu.</p>
+    <div class="tabela" id="tabExcluidos"></div>
+  </section>
+
+  </section>
+
+  <!-- ================= ENVIAR ================= -->
+  <section class="pagina" id="p-enviar">
+    <button class="cta cta-largo" id="abrirPin"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="8" cy="15" r="4.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M11.2 11.8 20 3M16.5 6.5l2.5 2.5M14 9l2 2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><span>Cadastrar PIN</span></button>
+
+    <div class="painel" id="painelPin" hidden>
+      <h2>Cadastrar PIN</h2>
+      <p class="dica">Escolha 4 números só seus. É feito uma vez só; depois você usa o mesmo PIN em todos os envios.</p>
+      <label for="pinBusca">Seu nome</label>
+      <div class="combo"><input type="text" id="pinBusca" placeholder="Digite seu nome" autocomplete="off"><div class="lista" id="pinLista"></div></div>
+      <div class="aviso" id="pinStatus"></div>
+      <div id="pinForm" hidden>
+        <label for="pinNovo1">Novo PIN</label>
+        <div class="pins">
+          <input type="password" class="pin" id="pinNovo1" inputmode="numeric" maxlength="4" placeholder="••••" autocomplete="off">
+          <input type="password" class="pin" id="pinNovo2" inputmode="numeric" maxlength="4" placeholder="••••" aria-label="Confirme o PIN" autocomplete="off">
+        </div>
+        <button class="btn" id="cadastrarPin">Cadastrar PIN</button>
+      </div>
+      <div class="aviso" id="pinRetorno"></div>
+    </div>
+
+    <div class="painel">
+      <h2>Enviar voo</h2>
+      <p class="dica">O voo é conferido no espaço aéreo, a rampa é reconhecida pela decolagem e a pontuação OLC é calculada automaticamente. <span id="avisoTemporada"></span></p>
+      <label for="pilotoBusca">Piloto</label>
+      <div class="combo"><input type="text" id="pilotoBusca" placeholder="Digite seu nome" autocomplete="off"><div class="lista" id="pilotoLista"></div></div>
+      <div class="aviso" id="pilotoStatus"></div>
+      <div id="pinEntrada" hidden>
+        <label for="pin">PIN</label>
+        <input type="password" class="pin" id="pin" inputmode="numeric" maxlength="4" placeholder="••••" autocomplete="off">
+      </div>
+      <div class="zona" id="zonaEnviar" tabindex="0" role="button">
+        <strong>Escolher arquivos IGC</strong><span>Um ou vários .igc, ou um .zip. Até 10 voos por vez.</span>
+        <input type="file" accept=".igc,.IGC,.zip,.ZIP,application/zip" multiple>
+        <ul class="arquivos-lista" hidden></ul>
+      </div>
+      <button class="btn" id="enviar" disabled>Enviar voo</button>
+      <div class="aviso" id="enviarErro"></div>
+    </div>
+
+    <div class="resultado" id="resEnviar"></div>
+  </section>
+
+  <!-- ================= VERIFICAR ================= -->
+  <section class="pagina" id="p-verificar">
+    <div class="painel">
+      <h2>Verificar espaço aéreo</h2>
+      <p class="dica">Confira seu voo antes de enviar. Nada é gravado e não precisa de PIN.</p>
+      <div class="zona" id="zonaVerificar" tabindex="0" role="button">
+        <strong>Escolher arquivos IGC</strong><span>Um ou vários .igc, ou um .zip. Até 10 voos por vez.</span>
+        <input type="file" accept=".igc,.IGC,.zip,.ZIP,application/zip" multiple>
+        <ul class="arquivos-lista" hidden></ul>
+      </div>
+      <button class="btn" id="verificar" disabled>Verificar voo</button>
+      <div class="aviso" id="verificarErro"></div>
+    </div>
+    <div class="resultado" id="resVerificar"></div>
+  </section>
+
+  <!-- ================= ORGANIZADOR ================= -->
+  <section class="pagina" id="p-admin">
+    <div class="painel" id="admLogin" style="max-width:460px; margin:0 auto">
+      <h2>Área do organizador</h2>
+      <p class="dica">Acesso restrito. Entre com o e-mail e a senha cadastrados.</p>
+      <label for="admEmail">E-mail</label><input type="text" id="admEmail" autocomplete="username" inputmode="email">
+      <label for="admSenha">Senha</label><input type="password" id="admSenha" autocomplete="current-password">
+      <button class="btn" id="admEntrar">Entrar</button>
+      <div class="aviso" id="admLoginAviso"></div>
+    </div>
+
+    <div id="admArea" hidden>
+      <div class="adm-topo"><span id="admQuem"></span><button class="acao" id="admSair">Sair</button></div>
+      <div class="visoes" role="tablist">
+        <button role="tab" aria-selected="true" data-adm="pilotos">Pilotos</button>
+        <button role="tab" aria-selected="false" data-adm="voos">Voos</button>
+        <button role="tab" aria-selected="false" data-adm="ea">Espaço aéreo</button>
+        <button role="tab" aria-selected="false" data-adm="records">Records</button>
+        <button role="tab" aria-selected="false" data-adm="temporada">Temporada</button>
+      </div>
+
+      <div class="adm-aba" id="adm-pilotos">
+        <div class="painel">
+          <h2>Importar lista de pilotos</h2>
+          <p class="dica">Planilha Excel (.xlsx) ou CSV com as colunas <b>Piloto</b>, <b>Categoria</b> (OPEN, SPORT ou LITE) e <b>S</b> (M ou F). Pilotos que já existem têm categoria e sexo atualizados; o PIN e os voos de cada um não mudam.</p>
+          <input type="file" id="impArquivo" accept=".xlsx,.xls,.csv" hidden>
+          <button class="btn contorno" id="impEscolher" style="margin-top:0">Escolher planilha</button>
+          <div class="aviso" id="impAviso"></div>
+          <div id="impPrevia" hidden></div>
+        </div>
+        <div class="painel">
+          <h2>Adicionar piloto</h2>
+          <div class="adm-form">
+            <div class="nome-novo"><label for="novoNome">Nome completo</label><input type="text" id="novoNome" autocomplete="off"></div>
+            <div><label for="novaCat">Categoria</label><select id="novaCat"><option>OPEN</option><option>SPORT</option><option>LITE</option></select></div>
+            <div><label for="novoSexo">Sexo</label><select id="novoSexo"><option value="M">Masculino</option><option value="F">Feminino</option></select></div>
+            <button class="btn" id="addPiloto">Adicionar</button>
+          </div>
+          <div class="aviso" id="addAviso"></div>
+        </div>
+        <div class="adm-filtros"><input type="text" id="admBuscaPiloto" placeholder="Buscar piloto"></div>
+        <div class="tabela" id="admTabPilotos"><div class="vazio">Carregando…</div></div>
+      </div>
+
+      <div class="adm-aba" id="adm-ea" hidden>
+        <div class="painel">
+          <h2>Nova versão do espaço aéreo</h2>
+          <p class="dica">Envie o arquivo TXT no formato OpenAir (o mesmo usado hoje). A troca vale para os voos enviados <b>a partir da ativação</b>: os voos já gravados continuam conferidos com a versão da época.</p>
+          <label for="eaVersao">Nome da versão</label>
+          <input type="text" id="eaVersao" placeholder="Ex.: EAP XC PR 2026 v3" autocomplete="off">
+          <input type="file" id="eaArquivo" accept=".txt,.TXT" hidden>
+          <button class="btn contorno" id="eaEscolher">Escolher arquivo TXT</button>
+          <div class="aviso" id="eaAviso"></div>
+          <div id="eaPrevia" hidden>
+            <div class="tabela" id="eaTabAreas" style="margin-top:14px"></div>
+            <div class="mapa" id="eaMapa" style="margin-top:12px; height:380px"></div>
+            <button class="btn" id="eaSalvar">Salvar e ativar esta versão</button>
+          </div>
+        </div>
+        <div class="tabela" id="eaVersoes"><div class="vazio">Carregando…</div></div>
+      </div>
+
+      <div class="adm-aba" id="adm-records" hidden>
+        <div class="painel">
+          <h2>Atualizar records</h2>
+          <p class="dica">Os records não mudam sozinhos com os voos enviados: só com a planilha oficial. Envie a lista <b>completa</b> (colunas <b>Rampas</b>, <b>Record de distancia</b>, <b>Piloto</b> e <b>data</b>). Ela substitui a lista atual inteira, então uma rampa que não estiver na planilha sai da aba Records.</p>
+          <input type="file" id="recArquivo" accept=".xlsx,.xls,.csv" hidden>
+          <button class="btn contorno" id="recEscolher" style="margin-top:0">Escolher planilha de records</button>
+          <div class="aviso" id="recAviso"></div>
+          <div id="recPrevia" hidden></div>
+        </div>
+        <div class="tabela" id="recAtuais"><div class="vazio">Carregando…</div></div>
+      </div>
+
+      <div class="adm-aba" id="adm-temporada" hidden>
+        <div class="painel">
+          <h2>Encerrar temporada</h2>
+          <p class="dica">No fim do ano: 1) salve a temporada, 2) apague os voos dela, 3) se for trocar a lista, apague os pilotos e importe a nova. A tabela final salva continua aparecendo no ranking quando alguém escolher aquele ano.</p>
+          <label for="tmpAberta">Temporada aberta para envio de voos</label>
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+            <select id="tmpAberta"></select>
+            <button class="acao" id="tmpAbertaSalvar" style="padding:10px 14px">Salvar</button>
+            <span class="cat" id="tmpAbertaInfo"></span>
+          </div>
+          <label for="tmpAno">Temporada para salvar ou apagar</label>
+          <select id="tmpAno"></select>
+          <div class="status-temp" id="tmpStatus">Carregando…</div>
+          <button class="btn" id="tmpSalvar">Salvar temporada</button>
+          <div class="aviso" id="tmpAviso"></div>
+        </div>
+        <div class="painel zona-perigo">
+          <h2>Zona de perigo</h2>
+          <p class="dica">Ações definitivas, sem como desfazer. Cada uma pede que você digite uma confirmação.</p>
+          <button class="btn perigo" id="tmpApagarVoos">Apagar voos da temporada</button>
+          <p class="dica" style="margin-top:6px">Apaga os voos e os traçados do ano escolhido. Só funciona depois de salvar a temporada.</p>
+          <button class="btn perigo" id="tmpApagarPilotos">Apagar todos os pilotos</button>
+          <p class="dica" style="margin-top:6px">Apaga a lista de pilotos e os PINs. Só funciona quando não há mais nenhum voo gravado. As tabelas finais salvas não são afetadas.</p>
+          <div class="aviso" id="tmpPerigoAviso"></div>
+        </div>
+      </div>
+
+      <div class="adm-aba" id="adm-voos" hidden>
+        <div class="adm-filtros">
+          <select id="admTemporada"></select>
+          <select id="admFiltro"><option value="todos">Todos os voos</option><option value="validos">Só válidos</option><option value="excluidos">Só excluídos</option></select>
+          <input type="text" id="admBuscaVoo" placeholder="Buscar por piloto ou rampa">
+        </div>
+        <div class="tabela" id="admTabVoos"><div class="vazio">Carregando…</div></div>
+      </div>
+    </div>
+  </section>
+
+  <p class="rodape">Ranking: soma dos 7 melhores voos de cada piloto, com no máximo 2 por rampa.<br>Desenvolvido por Arthur Grandini Rodella (Tutu) · <a href="#admin" id="linkAdmin">Área do organizador</a></p>
+</div>
+
+<dialog id="modal" aria-labelledby="modalTitulo">
+  <div class="modal-topo">
+    <div><h2 id="modalTitulo"></h2><p id="modalSub"></p></div>
+    <button class="fechar" id="fechar" aria-label="Fechar">×</button>
+  </div>
+  <div id="mapa"></div>
+  <dl class="faixa" id="modalMedidas"></dl>
+</dialog>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+
+// ====== DADOS DO PROJETO (públicos) ======
+const SUPABASE_URL = "https://vycnulbqajunyndambcv.supabase.co";
+const PUBLISHABLE_KEY = "sb_publishable_W46Q-vtL5IS9rMk-IHjHxw_v1iE5aDD";
+// =========================================
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const num = (v, d = 2) => Number(v).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
+const dataBR = iso => iso ? iso.slice(0, 10).split("-").reverse().join("/") : "";
+const dur = s => `${Math.floor(s / 3600)}h${String(Math.floor(s % 3600 / 60)).padStart(2, "0")}`;
+const TIPOS = { livre: "Livre", triangulo: "Triângulo", fai: "FAI" };
+const TIPOS_LONGOS = { livre: "Distância livre", triangulo: "Triângulo livre", fai: "Triângulo FAI" };
+const TIPOS_MIN = { livre: "distância livre", triangulo: "triângulo livre", fai: "triângulo FAI" };
+const FUNCAO = `${SUPABASE_URL}/functions/v1/enviar-voo`;
+const hms = s => `${Math.floor(s / 3600)}h${String(Math.floor(s % 3600 / 60)).padStart(2, "0")}`;
+
+async function rest(caminho) {
+  const todos = [];
+  for (let ini = 0; ; ini += 1000) {                     // o Supabase entrega no máximo 1000 linhas por vez
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${caminho}`, { headers: { apikey: PUBLISHABLE_KEY, Range: `${ini}-${ini + 999}` } });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const parte = await r.json(); todos.push(...parte);
+    if (parte.length < 1000) return todos;
+  }
+}
+
+let pilotos = new Map(), listaPilotos = [], rampas = new Map(), modelo = "esfera";
+let contam = [], todosVoos = [], records = [], excluidos = [];
+let modoSalvo = false, pilotosSalvos = new Map(), anosSalvos = [], temporadaAberta = new Date().getFullYear();
+const pil = id => pilotosSalvos.get(id) || pilotos.get(id);
+const nomeRampa = v => v.rampa_nome || rampas.get(v.rampa_id) || "";
+let categoria = "OPEN", temporada = null, limiteTop = 50;
+
+const naCategoria = p => p && (categoria === "OPEN" ? true
+  : categoria === "SPORT" ? (p.categoria === "SPORT" || p.categoria === "LITE")
+  : categoria === "LITE" ? p.categoria === "LITE" : p.sexo === "F");
+const pts = v => +(modelo === "elipsoide" ? v.pontos_elips : v.pontos_esfera);
+const km = v => +(modelo === "elipsoide" ? v.dist_elips_km : v.dist_esfera_km);
+
+// ---------- ranking ----------
+function desenharRanking() {
+  const porPiloto = new Map();
+  for (const v of contam) {
+    const p = pil(v.piloto_id); if (!naCategoria(p)) continue;
+    if (!porPiloto.has(p.id)) porPiloto.set(p.id, { p, total: 0, voos: [] });
+    const e = porPiloto.get(p.id); e.total += +v.pontos; e.voos.push(v);
+  }
+  const linhas = [...porPiloto.values()].sort((a, b) => b.total - a.total);
+  if (!linhas.length) { $("tabRanking").innerHTML = `<div class="vazio">Nenhum voo nesta categoria em ${temporada}. O primeiro voo enviado abre o ranking.</div>`; return; }
+  let pos = 0, ant = null;
+  const corpo = linhas.map(l => {
+    const t = Math.round(l.total * 100); if (t !== ant) { pos++; ant = t; }
+    const med = ["🥇", "🥈", "🥉"][pos - 1];
+    return `<tr class="piloto" tabindex="0" aria-expanded="false" data-id="${l.p.id}">
+      <td class="pos">${med ? `<span class="med" aria-label="${pos}º">${med}</span>` : pos}</td>
+      <td><span class="nome ${l.p.sexo === "F" ? "f" : ""}">${esc(l.p.nome)}</span><span class="seta" aria-hidden="true">›</span><span class="cat so-celular"><br>${l.p.categoria}</span></td>
+      <td class="cat esconde-celular">${l.p.categoria}</td>
+      <td class="num esconde-celular">${l.voos.length}/7</td>
+      <td class="num total">${num(l.total)}</td></tr>`;
+  }).join("");
+  $("tabRanking").innerHTML = `<table><thead><tr><th class="pos">#</th><th>Piloto</th><th class="esconde-celular">Cat.</th><th class="num esconde-celular">Voos</th><th class="num">Pontos</th></tr></thead><tbody>${corpo}</tbody></table>`;
+  $("tabRanking").querySelectorAll("tr.piloto").forEach(tr => {
+    const abrir = () => alternarPiloto(tr, porPiloto.get(+tr.dataset.id));
+    tr.addEventListener("click", abrir);
+    tr.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrir(); } });
+  });
+}
+
+function alternarPiloto(tr, info) {
+  const aberto = tr.getAttribute("aria-expanded") === "true";
+  if (tr.nextElementSibling?.classList.contains("detalhe")) tr.nextElementSibling.remove();
+  tr.setAttribute("aria-expanded", String(!aberto));
+  if (aberto) return;
+  const ids = new Set(info.voos.map(v => v.id));
+  const fora = todosVoos.filter(v => v.piloto_id === info.p.id && !ids.has(v.id)).sort((a, b) => pts(b) - pts(a));
+  const linha = (v, conta) => `<tr class="voo ${conta ? "" : "fora"}" tabindex="0" data-voo="${v.id}">
+      <td>${dataBR(v.data_voo)}</td><td>${esc(nomeRampa(v))}</td>
+      <td class="esconde-celular"><span class="etq ${v.tipo_voo}">${TIPOS[v.tipo_voo]}</span></td>
+      <td class="num esconde-celular">${dur(v.duracao_s)}</td>
+      <td class="num esconde-celular">${num(v.linha_reta_km, 1)}</td>
+      <td class="num esconde-celular">${num(km(v), 1)}</td><td class="num"><b>${num(pts(v))}</b></td></tr>`;
+  const det = document.createElement("tr"); det.className = "detalhe";
+  det.innerHTML = `<td colspan="5"><table class="voos">
+      <thead><tr><th>Data</th><th>Rampa</th><th class="esconde-celular">Tipo</th><th class="num esconde-celular">Dur.</th><th class="num esconde-celular">L. reta</th><th class="num esconde-celular">OLC km</th><th class="num">Pontos</th></tr></thead>
+      <tbody>${info.voos.sort((a, b) => b.pontos - a.pontos).map(v => linha(v, true)).join("")}${fora.map(v => linha(v, false)).join("")}</tbody></table>
+      ${fora.length ? `<button class="ver-fora" aria-expanded="false">Ver os outros ${fora.length} voo${fora.length > 1 ? "s" : ""} da temporada</button>` : ""}
+      <p class="nota">${modoSalvo ? "Temporada encerrada: os traçados dos voos não ficam guardados." : "Toque em um voo para ver no mapa."}</p></td>`;
+  tr.after(det);
+  const bt = det.querySelector(".ver-fora");
+  if (bt) bt.addEventListener("click", e => {
+    e.stopPropagation();
+    const t = det.querySelector(".voos"), aberto = t.classList.toggle("mostra-fora");
+    bt.setAttribute("aria-expanded", aberto);
+    bt.textContent = aberto ? "Esconder voos que não contam (em cinza: limite de 2 por rampa ou fora dos 7 melhores)" : `Ver os outros ${fora.length} voo${fora.length > 1 ? "s" : ""} da temporada`;
+  });
+  ligarVoos(det);
+}
+
+function ligarVoos(raiz) {
+  if (modoSalvo) return;   // temporada encerrada: sem traçados para mostrar
+  raiz.querySelectorAll("[data-voo]").forEach(el => {
+    const abrir = e => { e.stopPropagation(); abrirVoo(el.dataset.voo); };
+    el.addEventListener("click", abrir);
+    el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrir(e); } });
+  });
+}
+
+// ---------- top voos ----------
+function desenharTop() {
+  const lista = todosVoos.filter(v => naCategoria(pil(v.piloto_id))).sort((a, b) => pts(b) - pts(a));
+  if (!lista.length) { $("tabTop").innerHTML = `<div class="vazio">Nenhum voo nesta categoria em ${temporada}.</div>`; $("maisTop").hidden = true; return; }
+  const corpo = lista.slice(0, limiteTop).map((v, i) => {
+    const p = pil(v.piloto_id);
+    return `<tr class="voo piloto" tabindex="0" data-voo="${v.id}">
+      <td class="pos">${i + 1}</td>
+      <td><span class="nome ${p.sexo === "F" ? "f" : ""}">${esc(p.nome)}</span><br><span class="cat">${dataBR(v.data_voo)}, ${esc(nomeRampa(v))}</span></td>
+      <td class="esconde-celular"><span class="etq ${v.tipo_voo}">${TIPOS[v.tipo_voo]}</span></td>
+      <td class="num esconde-celular">${num(km(v), 1)} km</td>
+      <td class="num total">${num(pts(v))}</td></tr>`;
+  }).join("");
+  $("tabTop").innerHTML = `<table><thead><tr><th class="pos">#</th><th>Piloto e voo</th><th class="esconde-celular">Tipo</th><th class="num esconde-celular">OLC</th><th class="num">Pontos</th></tr></thead><tbody>${corpo}</tbody></table>`;
+  $("maisTop").hidden = lista.length <= limiteTop;
+  ligarVoos($("tabTop"));
+}
+$("maisTop").addEventListener("click", () => { limiteTop += 50; desenharTop(); });
+
+// ---------- records ----------
+function desenharRecords() {
+  $("gradeRecords").innerHTML = records.map(r => `
+    <article class="record ${r.origem === "sistema" ? "novo clicavel" : ""}" ${r.voo_id ? `data-voo="${r.voo_id}" tabindex="0"` : ""}>
+      <h3>${esc(r.rampa)}</h3>
+      <div class="km">${num(r.distancia_km, 1)} <small>km</small></div>
+      <p>${esc(r.pilotos)}</p><p class="data">${dataBR(r.data)}</p>
+    </article>`).join("") || `<div class="vazio">Sem records cadastrados.</div>`;
+  ligarVoos($("gradeRecords"));
+}
+
+// ---------- mapa ----------
+let mapa = null;
+async function abrirVoo(id) {
+  let v = excluidos.find(x => x.id === id) || todosVoos.find(x => x.id === id) || (typeof admVoos !== "undefined" && admVoos.find(x => x.id === id));
+  if (v && v.pontos_virada === undefined) v = null;
+  if (!v) { const r = await rest(`voos?id=eq.${id}&select=${CAMPOS}`); v = r[0]; if (!v) return; }
+  const p = pil(v.piloto_id);
+  $("modalTitulo").textContent = `${num(pts(v))} pontos, ${TIPOS_MIN[v.tipo_voo]} de ${num(km(v), 1)} km`;
+  $("modalSub").textContent = `${p ? p.nome : ""}, ${rampas.get(v.rampa_id) || ""}, ${dataBR(v.data_voo)}` + (v.anulado || v.ea_status === "invadido" ? `. ${motivoExclusao(v)}` : "");
+  $("modalMedidas").innerHTML = [
+    ["Decolagem", (v.decolagem_hora || "").slice(0, 5)], ["Duração", dur(v.duracao_s)], ["Altitude máx.", `${v.alt_max_m} m`],
+    ["Ganho", `${v.ganho_alt_m} m`], ["Linha reta", `${num(v.linha_reta_km, 1)} km`], ["Tracklog", `${num(v.tracklog_km, 1)} km`],
+  ].map(([k, x]) => `<div><dt>${k}</dt><dd>${x}</dd></div>`).join("");
+  $("modal").showModal();
+
+  if (!mapa) {
+    mapa = L.map("mapa", { scrollWheelZoom: false });
+    const base = location.protocol === "file:"
+      ? L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}", { attribution: "© Esri", maxZoom: 18 })
+      : L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap", maxZoom: 19 });
+    const sat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { attribution: "© Esri", maxZoom: 18 });
+    base.addTo(mapa); L.control.layers({ "Mapa": base, "Satélite": sat }).addTo(mapa);
+    mapa._camada = L.layerGroup().addTo(mapa);
+  }
+  mapa.invalidateSize(); mapa._camada.clearLayers();
+  const SOL = "#f5b52e", pv = v.pontos_virada || {};
+  const geo = [];
+  const ponto = (q, t) => { geo.push(q); L.circleMarker(q, { radius: 7, color: "#071a2e", weight: 2, fillColor: SOL, fillOpacity: 1 }).bindTooltip(t).addTo(mapa._camada); };
+  if (pv.tipo === "livre") {
+    const seq = [pv.inicio, ...pv.viradas, pv.fim]; L.polyline(seq, { color: SOL, weight: 4, opacity: .5 }).addTo(mapa._camada);
+    seq.forEach((q, i) => ponto(q, i === 0 ? "Início" : i === seq.length - 1 ? "Fim" : `Virada ${i}`));
+  } else if (pv.vertices) {
+    L.polygon(pv.vertices, { color: SOL, weight: 4, opacity: .5, fillColor: SOL, fillOpacity: .06 }).addTo(mapa._camada);
+    pv.vertices.forEach((q, i) => ponto(q, `Vértice ${i + 1}`));
+    if (pv.fechamento) L.polyline(pv.fechamento, { color: SOL, weight: 3, opacity: .6, dashArray: "8 8" }).bindTooltip(`Fechamento: ${num(pv.fechamento_km)} km`).addTo(mapa._camada);
+  }
+  for (const x of (v.ea_status === "invadido" ? v.ea_detalhes || [] : []))
+    for (const t of x.trechos || []) L.polyline(t, { color: "#ff2e2e", weight: 5 }).bindTooltip(`Invasão: ${x.area}`).addTo(mapa._camada);
+  for (const x of (v.ea_status === "invadido" ? v.ea_detalhes || [] : []))
+    L.circleMarker([x.lat, x.lon], { radius: 10, color: "#fff", weight: 2, fillColor: "#ff6b6b", fillOpacity: .9 }).bindTooltip(`${x.area}: ${x.excesso_m} m`).addTo(mapa._camada);
+  if (geo.length) mapa.fitBounds(geo, { padding: [30, 30] });
+  try {
+    const r = await fetch(`${SUPABASE_URL}/storage/v1/object/public/tracados/${v.tracado_arquivo}`);
+    const tr = await r.json();
+    const linha = L.polyline(tr.map(q => [q[0], q[1]]), { color: "#2b8fd6", weight: 2.5 }).addTo(mapa._camada);
+    linha.bringToBack();
+    L.circleMarker([tr[0][0], tr[0][1]], { radius: 6, color: "#fff", weight: 2, fillColor: "#8fd640", fillOpacity: 1 }).bindTooltip("Decolagem").addTo(mapa._camada);
+    mapa.fitBounds(linha.getBounds(), { padding: [24, 24] });
+  } catch { /* sem traçado: fica só a geometria OLC */ }
+}
+$("fechar").addEventListener("click", () => $("modal").close());
+$("modal").addEventListener("click", e => { if (e.target === $("modal")) $("modal").close(); });
+
+// ---------- filtros ----------
+document.querySelectorAll(".categorias button").forEach(b => b.addEventListener("click", () => {
+  categoria = b.dataset.cat; limiteTop = 50;
+  document.querySelectorAll(".categorias button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  desenharRanking(); desenharTop(); desenharExcluidos();
+}));
+document.querySelectorAll("[data-visao]").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("[data-visao]").forEach(x => x.setAttribute("aria-selected", x === b));
+  document.querySelectorAll(".visao").forEach(s => s.classList.toggle("ativa", s.id === "v-" + b.dataset.visao));
+}));
+
+// ---------- carga ----------
+const CAMPOS = "ea_status,ea_detalhes,anulado,anulado_motivo,id,piloto_id,rampa_id,data_voo,tipo_voo,dist_esfera_km,dist_elips_km,pontos_esfera,pontos_elips,decolagem_hora,duracao_s,alt_max_m,ganho_alt_m,linha_reta_km,tracklog_km,pontos_virada,tracado_arquivo,enviado_em";
+
+async function carregarTemporada() {
+  $("tabRanking").innerHTML = `<div class="vazio">Carregando…</div>`;
+  [contam, todosVoos, excluidos] = await Promise.all([
+    rest(`ranking_voos?temporada=eq.${temporada}&conta_no_ranking=is.true&select=id,piloto_id,pontos`),
+    rest(`voos?temporada=eq.${temporada}&anulado=is.false&ea_status=eq.ok&select=${CAMPOS}`),
+    rest(`voos?temporada=eq.${temporada}&or=(anulado.is.true,ea_status.eq.invadido)&select=${CAMPOS},ea_status,ea_detalhes,anulado,anulado_motivo&order=data_voo.desc`),
+  ]);
+  modoSalvo = false; pilotosSalvos = new Map();
+  if (!todosVoos.length && !excluidos.length && anosSalvos.includes(temporada)) {
+    // temporada encerrada: monta a tabela a partir do resultado salvo
+    const salvos = await rest(`temporadas_salvas?temporada=eq.${temporada}&select=*`);
+    modoSalvo = salvos.length > 0;
+    contam = []; let id = 0;
+    salvos.forEach((s, i) => {
+      const pid = -(i + 1);
+      pilotosSalvos.set(pid, { id: pid, nome: s.piloto_nome, categoria: s.categoria, sexo: s.sexo });
+      for (const v of s.voos) contam.push({
+        id: `s${++id}`, piloto_id: pid, rampa_nome: v.rampa, data_voo: v.data, tipo_voo: v.tipo,
+        dist_esfera_km: v.km, dist_elips_km: v.km, pontos_esfera: v.pontos, pontos_elips: v.pontos, pontos: +v.pontos,
+        duracao_s: v.duracao_s, linha_reta_km: v.linha_reta_km,
+      });
+    });
+    todosVoos = contam.slice();
+    const quando = salvos.reduce((m, s) => (s.salvo_em > m ? s.salvo_em : m), "");
+    $("atualizado").textContent = modoSalvo ? `Temporada encerrada. Resultado final salvo em ${new Date(quando).toLocaleDateString("pt-BR")}.` : "";
+  } else {
+    const det = new Map(todosVoos.map(v => [v.id, v]));
+    contam = contam.map(c => ({ ...det.get(c.id), pontos: +c.pontos }));
+    const ultimo = todosVoos.reduce((m, v) => (v.enviado_em > m ? v.enviado_em : m), "");
+    $("atualizado").textContent = ultimo ? `Último voo recebido em ${new Date(ultimo).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}` : "";
+  }
+  document.body.classList.toggle("modo-salvo", modoSalvo);
+  contarCategorias(modoSalvo ? [...pilotosSalvos.values()] : [...pilotos.values()]);
+  desenharRanking(); desenharTop(); desenharExcluidos();
+}
+
+// ---------- voos excluídos ----------
+function motivoExclusao(v) {
+  if (v.anulado) return `Anulado pelo organizador: ${v.anulado_motivo || "sem motivo informado"}`;
+  const viol = v.ea_detalhes || [];
+  return "Invasão de espaço aéreo: " + (viol.map(x => `${x.area} (${x.excesso_m} m ${x.tipo === "vertical" ? "acima do teto" : "dentro da área"}, às ${x.pior_hora.slice(0, 5)})`).join("; ") || "área proibida");
+}
+function desenharExcluidos() {
+  if (modoSalvo) { $("tabExcluidos").innerHTML = `<div class="vazio">Temporada encerrada: a lista de voos excluídos não fica guardada.</div>`; return; }
+  const lista = excluidos.filter(v => naCategoria(pil(v.piloto_id)));
+  if (!lista.length) { $("tabExcluidos").innerHTML = `<div class="vazio">Nenhum voo excluído nesta categoria em ${temporada}.</div>`; return; }
+  $("tabExcluidos").innerHTML = `<table><thead><tr><th>Piloto e voo</th><th>Motivo</th><th class="num">Pontos</th></tr></thead><tbody>${lista.map(v => {
+    const p = pil(v.piloto_id);
+    return `<tr class="voo piloto" tabindex="0" data-voo="${v.id}">
+      <td><span class="nome ${p.sexo === "F" ? "f" : ""}">${esc(p.nome)}</span><br><span class="cat">${dataBR(v.data_voo)}, ${esc(nomeRampa(v))}</span></td>
+      <td class="motivo">${esc(motivoExclusao(v))}</td>
+      <td class="num total riscado">${num(pts(v))}</td></tr>`;
+  }).join("")}</tbody></table>`;
+  ligarVoos($("tabExcluidos"));
+}
+
+
+// ======================= ENVIO E VERIFICAÇÃO =======================
+async function chamar(corpo) {
+  let r;
+  try {
+    r = await fetch(FUNCAO, { method: "POST", headers: { "Content-Type": "application/json", apikey: PUBLISHABLE_KEY }, body: JSON.stringify(corpo) });
+  } catch {
+    marcarConexao(false);
+    return { ok: false, status: 0, erro: "Sem conexão com a internet. Confira o sinal e tente de novo: nada foi enviado." };
+  }
+  marcarConexao(true);
+  let d;
+  try { d = await r.json(); } catch { d = null; }
+  if (d && (d.ok || d.erro)) return { ...d, status: r.status };
+  // resposta fora do padrão (ex.: limite de processamento do servidor)
+  const detalhe = d && (d.message || d.msg || d.code) ? ` (${d.message || d.msg || d.code})` : "";
+  return { ok: false, erro: `O servidor não conseguiu processar este arquivo agora${detalhe}. Tente de novo; se continuar, envie o IGC ao organizador.` };
+}
+function aviso(el, texto, tipo = "") { el.textContent = texto; el.className = `aviso mostra ${tipo}`; }
+function limpar(el) { el.className = "aviso"; el.textContent = ""; }
+
+
+// ---------- busca de piloto ----------
+function combo(input, lista, aoEscolher) {
+  let foco = -1, itens = [];
+  const desenhar = () => {
+    const f = input.value.trim().toUpperCase();
+    itens = listaPilotos.filter(p => p.nome.includes(f)).slice(0, 40);
+    lista.innerHTML = itens.map((p, i) => `<div data-i="${i}" class="${i === foco ? "foco" : ""}"><span>${esc(p.nome)}</span><small>${p.categoria}</small></div>`).join("");
+    lista.classList.toggle("aberta", itens.length > 0);
+  };
+  const escolher = p => { input.value = p.nome; lista.classList.remove("aberta"); aoEscolher(p); };
+  input.addEventListener("input", () => { foco = -1; desenhar(); aoEscolher(null); });
+  input.addEventListener("focus", desenhar);
+  input.addEventListener("keydown", e => {
+    if (!lista.classList.contains("aberta")) return;
+    if (e.key === "ArrowDown") { foco = Math.min(foco + 1, itens.length - 1); desenhar(); e.preventDefault(); }
+    if (e.key === "ArrowUp") { foco = Math.max(foco - 1, 0); desenhar(); e.preventDefault(); }
+    if (e.key === "Enter" && itens[foco]) { escolher(itens[foco]); e.preventDefault(); }
+    if (e.key === "Escape") lista.classList.remove("aberta");
+  });
+  lista.addEventListener("mousedown", e => { const d = e.target.closest("[data-i]"); if (d) escolher(itens[+d.dataset.i]); });
+  input.addEventListener("blur", () => setTimeout(() => lista.classList.remove("aberta"), 150));
+}
+
+// ---------- cadastro de PIN ----------
+let pilotoPin = null;
+$("abrirPin").addEventListener("click", () => {
+  const p = $("painelPin"); p.hidden = !p.hidden;
+  $("abrirPin").querySelector("span").textContent = p.hidden ? "Cadastrar PIN" : "Fechar cadastro de PIN";
+  if (!p.hidden) $("pinBusca").focus();
+});
+combo($("pinBusca"), $("pinLista"), async p => {
+  pilotoPin = p; $("pinForm").hidden = true; limpar($("pinStatus")); limpar($("pinRetorno"));
+  if (!p) return;
+  aviso($("pinStatus"), "Verificando…");
+  const r = await chamar({ modo: "tem_pin", piloto_id: p.id });
+  if (!r.ok) return aviso($("pinStatus"), r.erro, "erro");
+  if (r.tem_pin) aviso($("pinStatus"), "Você já tem um PIN cadastrado. Se esqueceu o número, peça ao organizador para resetar.");
+  else { limpar($("pinStatus")); $("pinForm").hidden = false; $("pinNovo1").focus(); }
+});
+$("pinNovo1").addEventListener("input", e => { e.target.value = e.target.value.replace(/\D/g, ""); if (e.target.value.length === 4) $("pinNovo2").focus(); });
+$("pinNovo2").addEventListener("input", e => { e.target.value = e.target.value.replace(/\D/g, ""); });
+$("cadastrarPin").addEventListener("click", async () => {
+  const p1 = $("pinNovo1").value, p2 = $("pinNovo2").value;
+  if (!/^\d{4}$/.test(p1)) return aviso($("pinRetorno"), "O PIN precisa ter exatamente 4 números.", "erro");
+  if (p1 !== p2) return aviso($("pinRetorno"), "Os dois PINs digitados são diferentes.", "erro");
+  $("cadastrarPin").disabled = true; $("cadastrarPin").textContent = "Cadastrando…";
+  const r = await chamar({ modo: "cadastrar_pin", piloto_id: pilotoPin.id, pin: p1 });
+  $("cadastrarPin").disabled = false; $("cadastrarPin").textContent = "Cadastrar PIN";
+  if (!r.ok) return aviso($("pinRetorno"), r.erro, "erro");
+  $("pinForm").hidden = true; $("pinNovo1").value = $("pinNovo2").value = "";
+  aviso($("pinRetorno"), "PIN cadastrado. Guarde esse número: você vai usá-lo em todos os envios.", "ok");
+  if (pilotoEnvio && pilotoEnvio.id === pilotoPin.id) checarPinEnvio(pilotoEnvio);
+});
+
+// ---------- envio ----------
+let pilotoEnvio = null, temPin = false;
+async function checarPinEnvio(p) {
+  temPin = false; $("pinEntrada").hidden = true; limpar($("pilotoStatus"));
+  if (!p) return atualizarBotoes();
+  aviso($("pilotoStatus"), "Verificando…");
+  const r = await chamar({ modo: "tem_pin", piloto_id: p.id });
+  if (!r.ok) aviso($("pilotoStatus"), r.erro, "erro");
+  else if (!r.tem_pin) aviso($("pilotoStatus"), "Você ainda não tem PIN. Toque em “Cadastrar PIN”, no topo, antes de enviar.", "erro");
+  else { limpar($("pilotoStatus")); temPin = true; $("pinEntrada").hidden = false; $("pin").focus(); }
+  atualizarBotoes();
+}
+combo($("pilotoBusca"), $("pilotoLista"), p => { pilotoEnvio = p; checarPinEnvio(p); });
+$("pin").addEventListener("input", e => { e.target.value = e.target.value.replace(/\D/g, ""); atualizarBotoes(); });
+
+// ---------- zonas de arquivo (um ou vários IGC, ou ZIP) ----------
+const LIMITE_VOOS = 10, LIMITE_ZIP = 7 * 1024 * 1024, LIMITE_IGC = 6 * 1024 * 1024;
+const arquivos = { enviar: [], verificar: [] };   // itens: { nome, ler: () => Promise<string> }
+
+async function expandir(files) {
+  const itens = [], avisos = [];
+  for (const f of files) {
+    if (/\.zip$/i.test(f.name)) {
+      if (f.size > LIMITE_ZIP) { avisos.push(`${f.name} passa de 7 MB.`); continue; }
+      if (!window.JSZip) { avisos.push("Não foi possível abrir arquivos ZIP agora. Recarregue a página."); continue; }
+      try {
+        const zip = await JSZip.loadAsync(f);
+        const entradas = Object.values(zip.files).filter(e => !e.dir && /\.igc$/i.test(e.name) && !/(^|\/)__MACOSX\//.test(e.name) && !/(^|\/)\._/.test(e.name));
+        if (!entradas.length) avisos.push(`${f.name} não tem nenhum arquivo .igc.`);
+        for (const e of entradas) {
+          const tam = e._data && e._data.uncompressedSize;
+          if (tam > LIMITE_IGC) { avisos.push(`${e.name} é grande demais.`); continue; }
+          itens.push({ nome: e.name.split("/").pop(), ler: () => e.async("string") });
+        }
+      } catch { avisos.push(`${f.name} não é um ZIP válido.`); }
+    } else if (/\.igc$/i.test(f.name)) {
+      if (f.size > LIMITE_IGC) { avisos.push(`${f.name} é grande demais.`); continue; }
+      itens.push({ nome: f.name, ler: () => f.text() });
+    } else avisos.push(`${f.name} foi ignorado (só .igc ou .zip).`);
+  }
+  return { itens, avisos };
+}
+
+function zona(id, chave) {
+  const z = $(id), inp = z.querySelector("input"), lista = z.querySelector(".arquivos-lista");
+  const erroEl = $(chave === "enviar" ? "enviarErro" : "verificarErro");
+  const definir = async files => {
+    if (!files || !files.length) return;
+    limpar(erroEl);
+    z.querySelector("strong").textContent = "Lendo arquivos…";
+    const { itens, avisos } = await expandir([...files]);
+    if (itens.length > LIMITE_VOOS) {
+      arquivos[chave] = [];
+      aviso(erroEl, `Foram encontrados ${itens.length} voos. O limite é ${LIMITE_VOOS} por envio: separe em mais de um ZIP ou selecione menos arquivos.`, "erro");
+    } else {
+      arquivos[chave] = itens;
+      if (avisos.length) aviso(erroEl, avisos.join(" "), itens.length ? "" : "erro");
+    }
+    const n = arquivos[chave].length;
+    z.classList.toggle("tem-arquivo", n > 0);
+    z.querySelector("strong").textContent = n === 0 ? "Escolher arquivos IGC" : n === 1 ? arquivos[chave][0].nome : `${n} voos selecionados`;
+    z.querySelector("span").textContent = n ? "Toque para trocar os arquivos" : "Um ou vários .igc, ou um .zip. Até 10 voos por vez.";
+    lista.hidden = n < 2;
+    lista.innerHTML = n < 2 ? "" : arquivos[chave].map(i => `<li>${esc(i.nome)}</li>`).join("");
+    inp.value = "";
+    atualizarBotoes();
+  };
+  z.addEventListener("click", () => inp.click());
+  z.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); inp.click(); } });
+  inp.addEventListener("click", e => e.stopPropagation());
+  inp.addEventListener("change", () => definir(inp.files));
+  z.addEventListener("dragover", e => { e.preventDefault(); z.classList.add("arrastando"); });
+  z.addEventListener("dragleave", () => z.classList.remove("arrastando"));
+  z.addEventListener("drop", e => { e.preventDefault(); z.classList.remove("arrastando"); definir(e.dataTransfer.files); });
+}
+zona("zonaEnviar", "enviar"); zona("zonaVerificar", "verificar");
+
+function atualizarBotoes() {
+  const ne = arquivos.enviar.length, nv = arquivos.verificar.length;
+  $("enviar").disabled = !(pilotoEnvio && temPin && /^\d{4}$/.test($("pin").value) && ne);
+  $("verificar").disabled = !nv;
+  if (!$("enviar").dataset.ocupado) $("enviar").textContent = ne > 1 ? `Enviar ${ne} voos` : "Enviar voo";
+  if (!$("verificar").dataset.ocupado) $("verificar").textContent = nv > 1 ? `Verificar ${nv} voos` : "Verificar voo";
+}
+
+// erros que valem para todos os arquivos: interrompem o lote (evita gastar as tentativas de PIN)
+const ERROS_DO_PILOTO = [401, 403, 404, 429];
+
+async function processar(modo) {
+  const ehEnvio = modo === "enviar";
+  const btn = $(ehEnvio ? "enviar" : "verificar"), erroEl = $(ehEnvio ? "enviarErro" : "verificarErro");
+  const resEl = $(ehEnvio ? "resEnviar" : "resVerificar"), mapaId = ehEnvio ? "mapaEnviar" : "mapaVerificar";
+  const itens = arquivos[modo];
+  limpar(erroEl); btn.disabled = true; btn.dataset.ocupado = "1";
+
+  // ----- um arquivo só: resultado completo, como antes -----
+  if (itens.length === 1) {
+    btn.textContent = ehEnvio ? "Enviando e calculando…" : "Calculando…";
+    const corpo = { modo, igc: await itens[0].ler() };
+    if (ehEnvio) Object.assign(corpo, { piloto_id: pilotoEnvio.id, pin: $("pin").value });
+    const r = await chamar(corpo);
+    delete btn.dataset.ocupado; atualizarBotoes();
+    if (!r.ok) { resEl.classList.remove("mostra"); return aviso(erroEl, r.erro, "erro"); }
+    mostrarResultado(resEl, r, mapaId);
+    if (r.gravado) atualizarAposEnvio(+r.data_voo.slice(0, 4));
+    resEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  // ----- vários arquivos: um por vez, com resumo -----
+  resEl.innerHTML = `<div class="lote"><h3 id="${modo}-titulo"></h3><ol id="${modo}-lista">${itens.map((it, i) =>
+    `<li data-i="${i}"><span class="ic">⏳</span><div class="info"><div class="arq">${esc(it.nome)}</div><div class="det">Aguardando</div></div><span class="pts"></span></li>`).join("")}</ol></div>
+    <div class="resultado" id="${modo}-detalhe"></div>`;
+  resEl.classList.add("mostra");
+  const titulo = $(`${modo}-titulo`), linhas = resEl.querySelectorAll(".lote li"), resultados = [];
+  let gravados = 0, anos = new Set(), parou = false;
+
+  for (let i = 0; i < itens.length; i++) {
+    const li = linhas[i], ic = li.querySelector(".ic"), det = li.querySelector(".det"), ptsEl = li.querySelector(".pts");
+    if (parou) { ic.textContent = "–"; det.textContent = "Não enviado (envio interrompido)"; continue; }
+    titulo.textContent = `${ehEnvio ? "Enviando" : "Verificando"} ${i + 1} de ${itens.length}…`;
+    btn.textContent = `${ehEnvio ? "Enviando" : "Verificando"} ${i + 1} de ${itens.length}…`;
+    det.textContent = "Calculando…";
+    let r;
+    try {
+      const corpo = { modo, igc: await itens[i].ler() };
+      if (ehEnvio) Object.assign(corpo, { piloto_id: pilotoEnvio.id, pin: $("pin").value });
+      r = await chamar(corpo);
+    } catch { r = { ok: false, erro: "Não foi possível ler este arquivo." }; }
+    resultados[i] = r;
+    if (!r.ok) {
+      ic.textContent = "❌"; det.innerHTML = `<span class="msg-erro">${esc(r.erro)}</span>`;
+      if (ehEnvio && (ERROS_DO_PILOTO.includes(r.status) || (r.status === 400 && /PIN|piloto/i.test(r.erro)))) { parou = true; aviso(erroEl, `Envio interrompido: ${r.erro}`, "erro"); }
+      continue;
+    }
+    const invadido = r.espaco_aereo.status !== "ok";
+    const p = modelo === "elipsoide" ? r.olc.pontos_elips : r.olc.pontos_esfera;
+    ic.textContent = invadido ? "⚠️" : "✅";
+    det.innerHTML = `${dataBR(r.data_voo)}, ${r.rampa ? esc(r.rampa.nome) : "fora das rampas do XC PR"}, ${TIPOS_MIN[r.olc.tipo_voo]}` +
+      (invadido ? `<br><span class="msg-ea">Invasão de espaço aéreo${r.gravado ? ": gravado, mas não conta no ranking" : ""}</span>` : "");
+    ptsEl.textContent = num(p);
+    if (invadido) ptsEl.classList.add("riscado");
+    li.classList.add("clicavel"); li.tabIndex = 0;
+    if (r.gravado) { gravados++; anos.add(+r.data_voo.slice(0, 4)); }
+  }
+
+  const ok = resultados.filter(r => r && r.ok).length;
+  titulo.textContent = ehEnvio
+    ? `${gravados} de ${itens.length} voos enviados${gravados ? ". Toque em um voo para ver os detalhes." : ""}`
+    : `${ok} de ${itens.length} voos verificados. Toque em um voo para ver os detalhes.`;
+  delete btn.dataset.ocupado; atualizarBotoes();
+
+  const detalhe = $(`${modo}-detalhe`);
+  const mostrar = i => {
+    linhas.forEach(l => l.classList.toggle("ativo", +l.dataset.i === i));
+    mostrarResultado(detalhe, resultados[i], mapaId);
+    detalhe.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  linhas.forEach(li => {
+    if (!li.classList.contains("clicavel")) return;
+    const i = +li.dataset.i;
+    li.addEventListener("click", () => mostrar(i));
+    li.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); mostrar(i); } });
+  });
+  for (const a of anos) await atualizarAposEnvio(a);
+  resEl.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+$("enviar").addEventListener("click", () => processar("enviar"));
+$("verificar").addEventListener("click", () => processar("verificar"));
+
+// ---------- resultado ----------
+function mostrarResultado(el, d, mapaId) {
+  const o = d.olc, m = d.metricas, ea = d.espaco_aereo, invadido = ea.status !== "ok";
+  const km = modelo === "elipsoide" ? o.dist_elips_km : o.dist_esfera_km;
+  const pts = modelo === "elipsoide" ? o.pontos_elips : o.pontos_esfera;
+  let selo;
+  if (d.gravado) selo = invadido ? `<span class="selo erro">Voo recebido, mas não conta no ranking por invasão de espaço aéreo</span>` : `<span class="selo ok">Voo enviado para o ranking</span>`;
+  else selo = `<span class="selo info">Só verificação: nada foi gravado</span>`;
+  const fech = o.pontos_virada.fechamento_km ? `<div><dt>Fechamento</dt><dd>${num(o.pontos_virada.fechamento_km)} km</dd></div>` : "";
+
+  el.innerHTML = `
+    ${selo}
+    <div class="placar ${invadido ? "anulado" : ""}">
+      <p class="tipo">${TIPOS_LONGOS[o.tipo_voo]} de ${num(km)} km</p>
+      <p class="local">${d.rampa ? esc(d.rampa.nome) : "Fora das rampas do XC Paraná"}, ${dataBR(d.data_voo)}${d.gravado ? `<br>${esc(d.piloto)}` : ""}</p>
+      <div class="pontos"><b>${num(pts)}</b><small>pontos OLC</small></div>
+    </div>
+    <div class="ea ${invadido ? "invadido" : ""}">
+      <h3>${invadido ? "Espaço aéreo invadido" : "Espaço aéreo respeitado"}</h3>
+      ${invadido ? `<ul>${ea.violacoes.map(v => `<li><strong>${esc(v.area)}</strong>: das ${v.inicio} às ${v.fim}. Pior momento às ${v.pior_hora}, ${v.excesso_m} m ${v.tipo === "vertical" ? "acima do teto" : "dentro da área"}.</li>`).join("")}</ul>` : ""}
+      <p>Conferido com ${esc(ea.versao)}.</p>
+    </div>
+    <dl class="medidas">
+      <div><dt>Decolagem</dt><dd>${m.decolagem_hora.slice(0, 5)}</dd></div>
+      <div><dt>Pouso</dt><dd>${m.pouso_hora.slice(0, 5)}</dd></div>
+      <div><dt>Duração</dt><dd>${hms(m.duracao_s)}</dd></div>
+      <div><dt>Altitude máxima</dt><dd>${m.alt_max_m} m</dd></div>
+      <div><dt>Ganho de altitude</dt><dd>${m.ganho_alt_m} m</dd></div>
+      <div><dt>Maior térmica</dt><dd>${num(m.vario_max_ms, 1)} m/s</dd></div>
+      <div><dt>Linha reta</dt><dd>${num(m.linha_reta_km, 1)} km</dd></div>
+      <div><dt>Tracklog</dt><dd>${num(m.tracklog_km, 1)} km</dd></div>
+      ${fech}
+    </dl>
+    <div class="mapa" id="${mapaId}"></div>
+    <div class="legenda">
+      <span><i style="background:#2b8fd6"></i>Tracklog</span>
+      <span><i style="background:var(--sol); opacity:.6"></i>${o.tipo_voo === "livre" ? "Pernas da distância livre" : "Triângulo pontuado"}</span>
+      ${o.pontos_virada.fechamento ? `<span><i style="background:repeating-linear-gradient(90deg,var(--sol) 0 5px,transparent 5px 9px)"></i>Fechamento</span>` : ""}
+      <span><i style="background:rgba(255,107,107,.6)"></i>Espaço aéreo proibido</span>
+      ${ea.violacoes.length ? `<span><i style="background:#ff2e2e; height:5px"></i>Trecho da invasão</span>` : ""}
+    </div>`;
+  el.classList.add("mostra");
+  desenharMapa(mapaId, d);
+}
+
+const mapasRes = {};
+// reserva: monta os trechos dentro da área a partir do traçado simplificado (respostas antigas sem "trechos")
+function dentroPol(lat, lon, P) {
+  let c = false;
+  for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [yi, xi] = P[i], [yj, xj] = P[j]; if ((yi > lat) !== (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi) c = !c; }
+  return c;
+}
+function trechosLocais(d, nomeArea) {
+  const a = d.espaco_aereo.areas.find(x => x.nome === nomeArea); if (!a || a.piso === undefined) return [];
+  const out = []; let cur = null;
+  for (const p of d.tracado) {
+    if (p[2] >= a.piso && p[2] <= a.teto && dentroPol(p[0], p[1], a.poligono)) (cur ??= []).push([p[0], p[1]]);
+    else if (cur) { out.push(cur); cur = null; }
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+function desenharMapa(id, d) {
+  if (mapasRes[id]) { mapasRes[id].remove(); delete mapasRes[id]; }
+  const mapa = L.map(id, { scrollWheelZoom: false });
+  mapasRes[id] = mapa;
+  // OpenStreetMap no site publicado; Esri quando aberto direto do computador (file://)
+  const base = location.protocol === "file:"
+    ? L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}", { attribution: "© Esri", maxZoom: 18 })
+    : L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap", maxZoom: 19 });
+  const satelite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { attribution: "© Esri", maxZoom: 18 });
+  base.addTo(mapa);
+  L.control.layers({ "Mapa": base, "Satélite": satelite }).addTo(mapa);
+
+  for (const a of d.espaco_aereo.areas)
+    L.polygon(a.poligono, { color: "#ff6b6b", weight: 1.5, fillOpacity: .12 }).bindTooltip(a.nome).addTo(mapa);
+  const trilha = L.polyline(d.tracado.map(p => [p[0], p[1]]), { color: "#2b8fd6", weight: 2.5 }).addTo(mapa);
+  for (const v of d.espaco_aereo.violacoes)
+    for (const t of v.trechos || trechosLocais(d, v.area)) L.polyline(t, { color: "#ff2e2e", weight: 5 }).bindTooltip(`Invasão: ${v.area}`).addTo(mapa);
+
+  const pv = d.olc.pontos_virada, SOL = "#f5b52e", ponto = (p, txt) => L.circleMarker(p, { radius: 7, color: "#071a2e", weight: 2, fillColor: SOL, fillOpacity: 1 }).bindTooltip(txt).addTo(mapa);
+  if (pv.tipo === "livre") {
+    const seq = [pv.inicio, ...pv.viradas, pv.fim];
+    L.polyline(seq, { color: SOL, weight: 4, opacity: .5 }).addTo(mapa);
+    seq.forEach((p, i) => ponto(p, i === 0 ? "Início" : i === seq.length - 1 ? "Fim" : `Virada ${i}`));
+  } else {
+    L.polygon(pv.vertices, { color: SOL, weight: 4, opacity: .5, fillColor: SOL, fillOpacity: .06 }).addTo(mapa);
+    pv.vertices.forEach((p, i) => ponto(p, `Vértice ${i + 1}`));
+    if (pv.fechamento) L.polyline(pv.fechamento, { color: SOL, weight: 3, opacity: .6, dashArray: "8 8" }).bindTooltip(`Fechamento: ${num(pv.fechamento_km)} km`).addTo(mapa);
+  }
+  const dec = d.tracado[0];
+  L.circleMarker([dec[0], dec[1]], { radius: 6, color: "#fff", weight: 2, fillColor: "#8fd640", fillOpacity: 1 }).bindTooltip("Decolagem").addTo(mapa);
+  for (const v of d.espaco_aereo.violacoes)
+    L.circleMarker([v.lat, v.lon], { radius: 10, color: "#fff", weight: 2, fillColor: "#ff6b6b", fillOpacity: .9 }).bindTooltip(`${v.area}: ${v.excesso_m} m`).addTo(mapa);
+  mapa.fitBounds(trilha.getBounds(), { padding: [24, 24] });
+}
+
+
+// ---------- navegação principal (com #ranking, #enviar, #verificar no endereço) ----------
+function irPara(pag) {
+  if (!["ranking", "enviar", "verificar", "admin"].includes(pag)) pag = "ranking";
+  if (pag === "admin") admAbrir();
+  document.querySelectorAll(".principal button").forEach(b => b.setAttribute("aria-selected", b.dataset.pag === pag));
+  document.querySelectorAll(".pagina").forEach(s => s.classList.toggle("ativa", s.id === "p-" + pag));
+  history.replaceState(null, "", "#" + pag);
+  if (pag === "enviar") $("ctaEnviar").setAttribute("aria-current", "page"); else $("ctaEnviar").removeAttribute("aria-current");
+  Object.values(mapasRes).forEach(m => m.invalidateSize());
+}
+document.querySelectorAll(".principal button").forEach(b => b.addEventListener("click", () => irPara(b.dataset.pag)));
+$("linkAdmin").addEventListener("click", e => { e.preventDefault(); irPara("admin"); scrollTo({ top: 0, behavior: "smooth" }); });
+$("ctaEnviar").addEventListener("click", e => { e.preventDefault(); irPara("enviar"); $("p-enviar").scrollIntoView({ behavior: "smooth", block: "start" }); });
+
+async function atualizarAposEnvio(ano) {
+  try {
+    records = await rest("records?select=*&order=distancia_km.desc"); desenharRecords();
+    if (![...$("temporada").options].some(o => +o.value === ano)) $("temporada").insertAdjacentHTML("afterbegin", `<option>${ano}</option>`);
+    if (temporada === ano) await carregarTemporada();
+  } catch { /* o ranking se atualiza no próximo carregamento */ }
+}
+
+
+// ======================= ÁREA DO ORGANIZADOR =======================
+const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, PUBLISHABLE_KEY) : null;
+let admPilotos = [], admComPin = new Set(), admVoos = [], admPronto = false;
+
+async function admTodos(montar) {               // busca paginada (o Supabase entrega 1000 linhas por vez)
+  const todos = [];
+  for (let ini = 0; ; ini += 1000) {
+    const { data, error } = await montar().range(ini, ini + 999);
+    if (error) throw error;
+    todos.push(...data); if (data.length < 1000) return todos;
+  }
+}
+
+async function admAbrir() {
+  if (!sb) return aviso($("admLoginAviso"), "Não foi possível carregar o sistema de login. Recarregue a página.", "erro");
+  const { data: { session } } = await sb.auth.getSession();
+  if (session && await admConfirmar(session)) return;
+  $("admLogin").hidden = false; $("admArea").hidden = true;
+}
+async function admConfirmar(session) {
+  await basePronta;
+  const { data: ehAdmin } = await sb.rpc("is_admin");
+  if (!ehAdmin) { await sb.auth.signOut(); aviso($("admLoginAviso"), "Este usuário não está cadastrado como organizador.", "erro"); return false; }
+  $("admLogin").hidden = true; $("admArea").hidden = false;
+  $("admQuem").textContent = `Conectado como ${session.user.email}`;
+  if (!admPronto) {
+    admPronto = true;
+    const anos = [...$("temporada").options].map(o => o.value);
+    $("admTemporada").innerHTML = anos.map(a => `<option ${+a === temporada ? "selected" : ""}>${a}</option>`).join("");
+  }
+  await Promise.all([admCarregarPilotos(), admCarregarVoos(), admCarregarEA(), admCarregarTemporada()]);
+  admDesenharRecordsAtuais(); admMostrarAberta();
+  return true;
+}
+$("admEntrar").addEventListener("click", async () => {
+  limpar($("admLoginAviso"));
+  const { data, error } = await sb.auth.signInWithPassword({ email: $("admEmail").value.trim(), password: $("admSenha").value });
+  if (error) return aviso($("admLoginAviso"), "E-mail ou senha incorretos.", "erro");
+  $("admSenha").value = "";
+  await admConfirmar(data.session);
+});
+$("admSenha").addEventListener("keydown", e => { if (e.key === "Enter") $("admEntrar").click(); });
+$("admSair").addEventListener("click", async () => { await sb.auth.signOut(); $("admArea").hidden = true; $("admLogin").hidden = false; });
+document.querySelectorAll("[data-adm]").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("[data-adm]").forEach(x => x.setAttribute("aria-selected", x === b));
+  document.querySelectorAll(".adm-aba").forEach(a => a.hidden = a.id !== "adm-" + b.dataset.adm);
+  if (eaMapa) eaMapa.invalidateSize();
+}));
+
+// ---------- pilotos ----------
+async function admCarregarPilotos() {
+  try {
+    const [ps, pins] = await Promise.all([
+      admTodos(() => sb.from("pilotos").select("id,nome,categoria,sexo,ativo").order("nome")),
+      admTodos(() => sb.from("pilotos_pin").select("piloto_id")),
+    ]);
+    admPilotos = ps; admComPin = new Set(pins.map(p => p.piloto_id));
+    admDesenharPilotos();
+  } catch (e) { $("admTabPilotos").innerHTML = `<div class="vazio">Erro ao carregar pilotos: ${esc(e.message)}</div>`; }
+}
+function admDesenharPilotos() {
+  const f = $("admBuscaPiloto").value.trim().toUpperCase();
+  const lista = admPilotos.filter(p => p.nome.includes(f));
+  const opc = (vals, atual) => vals.map(([v, t]) => `<option value="${v}" ${v === atual ? "selected" : ""}>${t}</option>`).join("");
+  $("admTabPilotos").innerHTML = `<table><thead><tr><th>Piloto</th><th>Categoria</th><th class="esconde-celular">Sexo</th><th>Ativo</th><th class="num">PIN</th></tr></thead><tbody>${lista.map(p => `
+    <tr data-id="${p.id}">
+      <td class="nome ${p.sexo === "F" ? "f" : ""}">${esc(p.nome)}</td>
+      <td><select data-campo="categoria">${opc([["OPEN", "OPEN"], ["SPORT", "SPORT"], ["LITE", "LITE"]], p.categoria)}</select></td>
+      <td class="esconde-celular"><select data-campo="sexo">${opc([["M", "M"], ["F", "F"]], p.sexo)}</select></td>
+      <td><input type="checkbox" data-campo="ativo" ${p.ativo ? "checked" : ""} aria-label="Piloto ativo"></td>
+      <td class="num">${admComPin.has(p.id) ? `<button class="acao" data-reset>Resetar PIN</button>` : `<span class="cat">sem PIN</span>`}</td>
+    </tr>`).join("")}</tbody></table>`;
+  $("admTabPilotos").querySelectorAll("[data-campo]").forEach(el => el.addEventListener("change", async () => {
+    const id = +el.closest("tr").dataset.id, campo = el.dataset.campo, valor = el.type === "checkbox" ? el.checked : el.value;
+    const { error } = await sb.from("pilotos").update({ [campo]: valor }).eq("id", id);
+    if (error) { alert("Não foi possível salvar: " + error.message); return admCarregarPilotos(); }
+    Object.assign(admPilotos.find(p => p.id === id), { [campo]: valor });
+    if (campo === "sexo") admDesenharPilotos();
+    carregarBase();
+  }));
+  $("admTabPilotos").querySelectorAll("[data-reset]").forEach(b => b.addEventListener("click", async () => {
+    const id = +b.closest("tr").dataset.id, p = admPilotos.find(x => x.id === id);
+    if (!confirm(`Resetar o PIN de ${p.nome}? Ele vai precisar cadastrar um PIN novo antes do próximo envio.`)) return;
+    const { error } = await sb.from("pilotos_pin").delete().eq("piloto_id", id);
+    if (error) return alert("Não foi possível resetar: " + error.message);
+    await sb.from("pin_tentativas").delete().eq("piloto_id", id);
+    admComPin.delete(id); admDesenharPilotos();
+  }));
+}
+$("admBuscaPiloto").addEventListener("input", admDesenharPilotos);
+$("addPiloto").addEventListener("click", async () => {
+  const nome = $("novoNome").value.trim().replace(/\s+/g, " ").toUpperCase();
+  if (nome.split(" ").length < 2) return aviso($("addAviso"), "Digite o nome completo do piloto.", "erro");
+  const { error } = await sb.from("pilotos").insert({ nome, categoria: $("novaCat").value, sexo: $("novoSexo").value });
+  if (error) return aviso($("addAviso"), error.code === "23505" ? `${nome} já está cadastrado.` : "Não foi possível adicionar: " + error.message, "erro");
+  aviso($("addAviso"), `${nome} adicionado. Ele já pode cadastrar o PIN e enviar voos.`, "ok");
+  $("novoNome").value = "";
+  await admCarregarPilotos(); carregarBase();
+});
+
+// ---------- voos ----------
+async function admCarregarVoos() {
+  try {
+    admVoos = await admTodos(() => sb.from("voos").select(CAMPOS).eq("temporada", +$("admTemporada").value).order("data_voo", { ascending: false }));
+    admDesenharVoos();
+  } catch (e) { $("admTabVoos").innerHTML = `<div class="vazio">Erro ao carregar voos: ${esc(e.message)}</div>`; }
+}
+function admDesenharVoos() {
+  const f = $("admBuscaVoo").value.trim().toUpperCase(), filtro = $("admFiltro").value;
+  const nomeP = id => admPilotos.find(p => p.id === id)?.nome || "?";
+  const lista = admVoos.filter(v => {
+    const exc = v.anulado || v.ea_status === "invadido";
+    if (filtro === "validos" && exc) return false;
+    if (filtro === "excluidos" && !exc) return false;
+    return !f || nomeP(v.piloto_id).includes(f) || (rampas.get(v.rampa_id) || "").toUpperCase().includes(f);
+  });
+  if (!lista.length) { $("admTabVoos").innerHTML = `<div class="vazio">Nenhum voo encontrado.</div>`; return; }
+  $("admTabVoos").innerHTML = `<table><thead><tr><th>Voo</th><th class="num">Pontos</th><th>Situação</th><th class="num">Ações</th></tr></thead><tbody>${lista.map(v => {
+    const estado = v.anulado ? `<span class="estado anulado">Anulado</span><br><span class="cat">${esc(v.anulado_motivo)}</span>`
+      : v.ea_status === "invadido" ? `<span class="estado e-ea">Espaço aéreo</span>` : `<span class="estado ok">Válido</span>`;
+    return `<tr data-id="${v.id}">
+      <td><span class="nome">${esc(nomeP(v.piloto_id))}</span><br><span class="cat">${dataBR(v.data_voo)}, ${esc(rampas.get(v.rampa_id))}, ${TIPOS[v.tipo_voo]}</span></td>
+      <td class="num">${num(pts(v))}</td>
+      <td>${estado}</td>
+      <td><div class="acoes">
+        <button class="acao" data-ver>Ver</button>
+        ${v.anulado ? `<button class="acao" data-reativar>Reativar</button>` : `<button class="acao" data-anular>Anular</button>`}
+        <button class="acao perigo" data-apagar>Apagar</button>
+      </div></td></tr>`;
+  }).join("")}</tbody></table>`;
+  const voo = b => admVoos.find(v => v.id === b.closest("tr").dataset.id);
+  const depois = async () => { await admCarregarVoos(); await carregarTemporada(); records = await rest("records?select=*&order=distancia_km.desc"); desenharRecords(); };
+  $("admTabVoos").querySelectorAll("[data-ver]").forEach(b => b.addEventListener("click", () => abrirVoo(voo(b).id)));
+  $("admTabVoos").querySelectorAll("[data-anular]").forEach(b => b.addEventListener("click", async () => {
+    const v = voo(b), motivo = prompt(`Motivo da anulação do voo de ${nomeP(v.piloto_id)} (${dataBR(v.data_voo)}). Ele aparece em "Voos excluídos":`);
+    if (!motivo || !motivo.trim()) return;
+    const { error } = await sb.from("voos").update({ anulado: true, anulado_motivo: motivo.trim() }).eq("id", v.id);
+    if (error) return alert("Não foi possível anular: " + error.message);
+    depois();
+  }));
+  $("admTabVoos").querySelectorAll("[data-reativar]").forEach(b => b.addEventListener("click", async () => {
+    const v = voo(b);
+    if (!confirm(`Reativar o voo de ${nomeP(v.piloto_id)} (${dataBR(v.data_voo)})?`)) return;
+    const { error } = await sb.from("voos").update({ anulado: false, anulado_motivo: null }).eq("id", v.id);
+    if (error) return alert("Não foi possível reativar: " + error.message);
+    depois();
+  }));
+  $("admTabVoos").querySelectorAll("[data-apagar]").forEach(b => b.addEventListener("click", async () => {
+    const v = voo(b);
+    if (!confirm(`APAGAR de vez o voo de ${nomeP(v.piloto_id)} (${dataBR(v.data_voo)}, ${num(pts(v))} pontos)?\n\nO voo some do sistema e o piloto poderá enviar o mesmo arquivo de novo. Para só tirar do ranking mantendo o registro, use "Anular".`)) return;
+    if (v.tracado_arquivo) await sb.storage.from("tracados").remove([v.tracado_arquivo]);
+    const { error } = await sb.from("voos").delete().eq("id", v.id);
+    if (error) return alert("Não foi possível apagar: " + error.message);
+    depois();
+  }));
+}
+$("admTemporada").addEventListener("change", admCarregarVoos);
+$("admFiltro").addEventListener("change", admDesenharVoos);
+$("admBuscaVoo").addEventListener("input", admDesenharVoos);
+
+
+// ---------- carregar bibliotecas só quando o organizador precisar ----------
+function carregarScript(url) {
+  return new Promise((ok, falha) => {
+    if (document.querySelector(`script[src="${url}"]`)) return ok();
+    const sc = document.createElement("script"); sc.src = url; sc.onload = ok; sc.onerror = () => falha(new Error("Falha ao carregar " + url));
+    document.head.appendChild(sc);
+  });
+}
+
+// ---------- importar lista de pilotos (Excel / CSV) ----------
+let impLinhas = null;
+const normal = t => String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase();
+$("impEscolher").addEventListener("click", () => $("impArquivo").click());
+$("impArquivo").addEventListener("change", async () => {
+  const f = $("impArquivo").files[0]; $("impArquivo").value = "";
+  if (!f) return;
+  limpar($("impAviso")); $("impPrevia").hidden = true; impLinhas = null;
+  try {
+    await carregarScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js");
+    const wb = XLSX.read(await f.arrayBuffer(), { type: "array" });
+    const linhas = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+    if (!linhas.length) return aviso($("impAviso"), "A planilha está vazia.", "erro");
+    // descobre as colunas pelo nome do cabeçalho
+    const cab = Object.keys(linhas[0]);
+    const col = re => cab.find(c => re.test(normal(c)));
+    const cNome = col(/^(PILOTO|NOME)/), cCat = col(/^CAT/), cSexo = col(/^(S|SEXO|GENERO)$/);
+    if (!cNome || !cCat || !cSexo) return aviso($("impAviso"), `Não encontrei as colunas Piloto, Categoria e S. Cabeçalho encontrado: ${cab.join(", ")}.`, "erro");
+    const validos = [], erros = [], vistos = new Set();
+    linhas.forEach((l, i) => {
+      const nome = String(l[cNome]).trim().replace(/\s+/g, " ").toUpperCase();
+      if (!nome) return;
+      let cat = normal(l[cCat]).replace(/^SPORT LITE$/, "LITE");
+      let sexo = normal(l[cSexo]); sexo = sexo.startsWith("F") ? "F" : sexo.startsWith("M") ? "M" : sexo;
+      if (!["OPEN", "SPORT", "LITE"].includes(cat)) return erros.push(`Linha ${i + 2}: ${nome}, categoria "${l[cCat]}" inválida`);
+      if (!["M", "F"].includes(sexo)) return erros.push(`Linha ${i + 2}: ${nome}, sexo "${l[cSexo]}" inválido`);
+      if (vistos.has(nome)) return erros.push(`Linha ${i + 2}: ${nome} aparece repetido`);
+      vistos.add(nome); validos.push({ nome, categoria: cat, sexo });
+    });
+    const atual = new Map(admPilotos.map(p => [p.nome, p]));
+    const novos = validos.filter(v => !atual.has(v.nome));
+    const mudou = validos.filter(v => { const a = atual.get(v.nome); return a && (a.categoria !== v.categoria || a.sexo !== v.sexo || !a.ativo); });
+    const iguais = validos.length - novos.length - mudou.length;
+    const fora = admPilotos.filter(p => p.ativo && !vistos.has(p.nome));
+    impLinhas = { novos, mudou, fora };
+    const desc = v => { const a = atual.get(v.nome), d = [];
+      if (!a.ativo) d.push("reativado");
+      if (a.categoria !== v.categoria) d.push(`<span class="de">${a.categoria}</span> → ${v.categoria}`);
+      if (a.sexo !== v.sexo) d.push(`<span class="de">${a.sexo}</span> → ${v.sexo}`);
+      return `${esc(v.nome)}: ${d.join(", ")}`; };
+    $("impPrevia").innerHTML = `
+      <div class="previa-resumo"><span>${novos.length} novo(s)</span><span>${mudou.length} alterado(s)</span><span>${iguais} sem mudança</span>${erros.length ? `<span style="color:var(--perigo)">${erros.length} linha(s) com erro</span>` : ""}</div>
+      ${novos.length || mudou.length || erros.length ? `<div class="previa-lista">
+        ${novos.length ? `<h4>Novos</h4><ul>${novos.map(v => `<li>${esc(v.nome)} (${v.categoria}, ${v.sexo})</li>`).join("")}</ul>` : ""}
+        ${mudou.length ? `<h4>Alterados</h4><ul>${mudou.map(v => `<li>${desc(v)}</li>`).join("")}</ul>` : ""}
+        ${erros.length ? `<h4>Ignorados por erro</h4><ul>${erros.map(e => `<li>${esc(e)}</li>`).join("")}</ul>` : ""}
+      </div>` : ""}
+      ${fora.length ? `<label class="marcar"><input type="checkbox" id="impDesativar"> <span>Desativar os ${fora.length} piloto(s) cadastrado(s) que não estão na planilha: ${fora.map(p => esc(p.nome)).join(", ")}. Os voos deles continuam gravados.</span></label>` : ""}
+      <button class="btn" id="impAplicar" ${novos.length || mudou.length || fora.length ? "" : "disabled"}>${novos.length || mudou.length ? "Aplicar importação" : "Nada para atualizar"}</button>`;
+    $("impPrevia").hidden = false;
+    $("impAplicar").addEventListener("click", aplicarImportacao);
+  } catch (e) { aviso($("impAviso"), "Não foi possível ler a planilha: " + e.message, "erro"); }
+});
+async function aplicarImportacao() {
+  const { novos, mudou, fora } = impLinhas, desativar = $("impDesativar")?.checked;
+  $("impAplicar").disabled = true;
+  const linhas = [...novos, ...mudou].map(v => ({ ...v, ativo: true }));
+  if (linhas.length) {
+    const { error } = await sb.from("pilotos").upsert(linhas, { onConflict: "nome" });
+    if (error) { $("impAplicar").disabled = false; return aviso($("impAviso"), "Erro ao importar: " + error.message, "erro"); }
+  }
+  if (desativar && fora.length) {
+    const { error } = await sb.from("pilotos").update({ ativo: false }).in("id", fora.map(p => p.id));
+    if (error) return aviso($("impAviso"), "Pilotos importados, mas houve erro ao desativar: " + error.message, "erro");
+  }
+  $("impPrevia").hidden = true;
+  aviso($("impAviso"), `Importação concluída: ${novos.length} novo(s), ${mudou.length} alterado(s)${desativar && fora.length ? `, ${fora.length} desativado(s)` : ""}.`, "ok");
+  await admCarregarPilotos(); carregarBase();
+}
+
+// ---------- espaço aéreo ----------
+function lerOpenAir(txt) {
+  const areas = []; let cur = null;
+  const altura = v => /GND|SFC/i.test(v) ? 0 : (() => { const m = v.match(/(\d+)\s*(FT|F|M)?/i); if (!m) return 0; return /^M$/i.test(m[2] || "") ? +m[1] : +m[1] * 0.3048; })();
+  for (const linha of txt.split(/\r?\n/)) {
+    const t = linha.trim();
+    if (t.startsWith("AC ")) { cur = { nome: "", piso: 0, teto: 99999, poligono: [] }; areas.push(cur); }
+    else if (!cur) continue;
+    else if (t.startsWith("AN ")) cur.nome = t.slice(3).trim();
+    else if (t.startsWith("AL ")) cur.piso = altura(t.slice(3));
+    else if (t.startsWith("AH ")) cur.teto = altura(t.slice(3));
+    else if (t.startsWith("DP ")) {
+      const m = t.match(/(\d+):(\d+):(\d+(?:\.\d+)?)\s*([NS])\s+(\d+):(\d+):(\d+(?:\.\d+)?)\s*([EW])/i); if (!m) continue;
+      let la = +m[1] + +m[2] / 60 + +m[3] / 3600; if (/S/i.test(m[4])) la = -la;
+      let lo = +m[5] + +m[6] / 60 + +m[7] / 3600; if (/W/i.test(m[8])) lo = -lo;
+      cur.poligono.push([la, lo]);
+    }
+  }
+  for (const a of areas) { const p = a.poligono; if (p.length > 1 && p[0][0] === p.at(-1)[0] && p[0][1] === p.at(-1)[1]) p.pop(); } // ponto de fechamento repetido
+  return areas;
+}
+let eaTexto = null, eaMapa = null;
+$("eaEscolher").addEventListener("click", () => $("eaArquivo").click());
+$("eaArquivo").addEventListener("change", async () => {
+  const f = $("eaArquivo").files[0]; $("eaArquivo").value = "";
+  if (!f) return;
+  limpar($("eaAviso")); $("eaPrevia").hidden = true; eaTexto = null;
+  const txt = await f.text(), areas = lerOpenAir(txt);
+  const validas = areas.filter(a => a.poligono.length >= 3), ruins = areas.filter(a => a.poligono.length < 3);
+  if (!validas.length) return aviso($("eaAviso"), "Nenhuma área válida encontrada. Confira se o arquivo está no formato OpenAir (linhas AC, AN, AL, AH e DP).", "erro");
+  if (!$("eaVersao").value.trim()) $("eaVersao").value = f.name.replace(/\.txt$/i, "");
+  eaTexto = txt;
+  const alt = m => m === 0 ? "Solo" : m >= 99999 ? "Sem limite" : `${Math.round(m)} m (${Math.round(m / 0.3048)} ft)`;
+  $("eaTabAreas").innerHTML = `<table><thead><tr><th>Área</th><th class="num">Piso</th><th class="num">Teto</th><th class="num esconde-celular">Vértices</th></tr></thead><tbody>${areas.map(a => `
+    <tr><td>${esc(a.nome || "(sem nome)")}${a.poligono.length < 3 ? ` <span class="motivo">ignorada: menos de 3 pontos</span>` : ""}</td>
+    <td class="num">${alt(a.piso)}</td><td class="num">${alt(a.teto)}</td><td class="num esconde-celular">${a.poligono.length}</td></tr>`).join("")}</tbody></table>`;
+  if (ruins.length) aviso($("eaAviso"), `${ruins.length} área(s) sem pontos suficientes serão ignoradas pelo sistema.`);
+  $("eaPrevia").hidden = false;
+  if (eaMapa) eaMapa.remove();
+  eaMapa = L.map("eaMapa", { scrollWheelZoom: false });
+  (location.protocol === "file:"
+    ? L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}", { attribution: "© Esri", maxZoom: 18 })
+    : L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap", maxZoom: 19 })).addTo(eaMapa);
+  const grupo = L.featureGroup(validas.map(a => L.polygon(a.poligono, { color: "#ff6b6b", weight: 1.5, fillOpacity: .15 }).bindTooltip(`${a.nome}: ${alt(a.piso)} a ${alt(a.teto)}`))).addTo(eaMapa);
+  eaMapa.fitBounds(grupo.getBounds(), { padding: [20, 20] });
+});
+$("eaSalvar").addEventListener("click", async () => {
+  const versao = $("eaVersao").value.trim();
+  if (!versao) return aviso($("eaAviso"), "Dê um nome para a versão (ex.: EAP XC PR 2026 v3).", "erro");
+  if (!confirm(`Ativar "${versao}"?\n\nOs voos enviados a partir de agora serão conferidos com esta versão. Os voos já gravados não mudam.`)) return;
+  $("eaSalvar").disabled = true;
+  const { data, error } = await sb.from("espacos_aereos").insert({ versao, conteudo: eaTexto, ativo: false }).select("id").single();
+  if (error) { $("eaSalvar").disabled = false; return aviso($("eaAviso"), error.code === "23505" ? "Já existe uma versão com esse nome." : "Erro ao salvar: " + error.message, "erro"); }
+  const r = await sb.rpc("ativar_espaco_aereo", { p_id: data.id });
+  $("eaSalvar").disabled = false;
+  if (r.error) return aviso($("eaAviso"), "Versão salva, mas não foi possível ativar: " + r.error.message, "erro");
+  $("eaPrevia").hidden = true; $("eaVersao").value = "";
+  aviso($("eaAviso"), `"${versao}" está ativa. A partir de agora, todos os envios e verificações usam esta versão.`, "ok");
+  admCarregarEA();
+});
+async function admCarregarEA() {
+  const { data, error } = await sb.from("espacos_aereos").select("id,versao,ativo,enviado_em").order("enviado_em", { ascending: false });
+  if (error) return $("eaVersoes").innerHTML = `<div class="vazio">Erro ao carregar versões: ${esc(error.message)}</div>`;
+  $("eaVersoes").innerHTML = `<table><thead><tr><th>Versões cadastradas</th><th class="esconde-celular">Enviada em</th><th class="num"></th></tr></thead><tbody>${data.map(v => `
+    <tr data-id="${v.id}"><td class="nome">${esc(v.versao)}</td>
+    <td class="cat esconde-celular">${new Date(v.enviado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}</td>
+    <td class="num">${v.ativo ? `<span class="selo-ativa">Em uso</span>` : `<button class="acao" data-ativar>Voltar para esta</button>`}</td></tr>`).join("")}</tbody></table>`;
+  $("eaVersoes").querySelectorAll("[data-ativar]").forEach(b => b.addEventListener("click", async () => {
+    const id = +b.closest("tr").dataset.id, v = data.find(x => x.id === id);
+    if (!confirm(`Voltar a usar "${v.versao}"?\n\nVale para os voos enviados a partir de agora.`)) return;
+    const { error } = await sb.rpc("ativar_espaco_aereo", { p_id: id });
+    if (error) return alert("Não foi possível ativar: " + error.message);
+    admCarregarEA();
+  }));
+}
+
+
+
+// ---------- records (só pela planilha oficial) ----------
+let recLista = null;
+const chaveRampa = t => normal(t).toLowerCase().replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(w => w && !["do", "da", "de", "dos", "das", "morro"].includes(w));
+function casarRampa(nome) {
+  const k = chaveRampa(nome);
+  if (!k.length) return null;
+  for (const [id, n] of rampas) {
+    const kr = chaveRampa(n);
+    if (kr.every(w => k.includes(w)) || k.every(w => kr.includes(w))) return { id, nome: n };
+  }
+  return null;
+}
+function lerData(v) {
+  if (v instanceof Date && !isNaN(v)) return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, "0")}-${String(v.getDate()).padStart(2, "0")}`;
+  if (typeof v === "number" && window.XLSX) { const d = XLSX.SSF.parse_date_code(v); if (d) return `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}`; }
+  const t = String(v ?? "").trim();
+  let m = t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/); if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  m = t.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  return null;
+}
+function admDesenharRecordsAtuais() {
+  $("recAtuais").innerHTML = records.length ? `<table><thead><tr><th>Records em vigor</th><th class="num">Distância</th><th class="esconde-celular">Piloto(s)</th><th class="num">Data</th></tr></thead><tbody>${records.map(r => `
+    <tr><td class="nome">${esc(r.rampa)}</td><td class="num">${num(r.distancia_km, 1)} km</td><td class="esconde-celular">${esc(r.pilotos)}</td><td class="num">${dataBR(r.data)}</td></tr>`).join("")}</tbody></table>`
+    : `<div class="vazio">Nenhum record cadastrado.</div>`;
+}
+$("recEscolher").addEventListener("click", () => $("recArquivo").click());
+$("recArquivo").addEventListener("change", async () => {
+  const f = $("recArquivo").files[0]; $("recArquivo").value = "";
+  if (!f) return;
+  limpar($("recAviso")); $("recPrevia").hidden = true; recLista = null;
+  try {
+    await carregarScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js");
+    const wb = XLSX.read(await f.arrayBuffer(), { type: "array", cellDates: true });
+    const linhas = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+    if (!linhas.length) return aviso($("recAviso"), "A planilha está vazia.", "erro");
+    const cab = Object.keys(linhas[0]), col = re => cab.find(c => re.test(normal(c)));
+    const cR = col(/^RAMPA/), cD = col(/RECORD|DISTANCIA/), cP = col(/^PILOTO/), cT = col(/^DATA/);
+    if (!cR || !cD || !cP || !cT) return aviso($("recAviso"), `Não encontrei as colunas Rampas, Record de distancia, Piloto e data. Cabeçalho encontrado: ${cab.join(", ")}.`, "erro");
+    const lista = [], erros = [], usadas = new Set();
+    linhas.forEach((l, i) => {
+      const nomePlan = String(l[cR]).trim(); if (!nomePlan) return;
+      const m = String(l[cD]).replace(",", ".").match(/\d+(\.\d+)?/), km = m ? +m[0] : NaN;
+      const data = lerData(l[cT]), pilotos = String(l[cP]).trim().replace(/\s+/g, " ");
+      if (!(km > 0)) return erros.push(`Linha ${i + 2}: ${nomePlan}, distância "${l[cD]}" inválida`);
+      if (!data) return erros.push(`Linha ${i + 2}: ${nomePlan}, data "${l[cT]}" inválida`);
+      if (!pilotos) return erros.push(`Linha ${i + 2}: ${nomePlan}, sem piloto`);
+      const rampa = casarRampa(nomePlan), chave = rampa ? "id" + rampa.id : normal(nomePlan);
+      if (usadas.has(chave)) return erros.push(`Linha ${i + 2}: ${nomePlan} aparece mais de uma vez`);
+      usadas.add(chave);
+      lista.push({ rampa_id: rampa ? rampa.id : null, rampa_nome: nomePlan, exibe: rampa ? rampa.nome : nomePlan, casou: !!rampa, distancia_km: Math.round(km * 10) / 10, pilotos, data });
+    });
+    if (!lista.length) return aviso($("recAviso"), "Nenhum record válido na planilha. " + erros.join("; "), "erro");
+    const atual = new Map(records.map(r => [normal(r.rampa), r]));
+    const status = r => { const a = atual.get(normal(r.exibe)); if (!a) return ["novo", "Novo"];
+      return (+a.distancia_km === r.distancia_km && a.pilotos === r.pilotos && a.data === r.data) ? ["igual", "Igual"] : ["mudou", "Alterado"]; };
+    const saem = records.filter(a => !lista.some(r => normal(r.exibe) === normal(a.rampa)));
+    recLista = lista;
+    $("recPrevia").innerHTML = `
+      <div class="tabela" style="margin-top:14px"><table><thead><tr><th>Rampa</th><th class="num">Distância</th><th class="esconde-celular">Piloto(s)</th><th class="num">Data</th><th class="num"></th></tr></thead><tbody>${lista.map(r => { const [c, t] = status(r); return `
+        <tr><td><span class="nome">${esc(r.exibe)}</span>${!r.casou ? `<br><span class="cat">rampa fora da lista do XC PR</span>` : r.exibe !== r.rampa_nome ? `<br><span class="cat">na planilha: ${esc(r.rampa_nome)}</span>` : ""}</td>
+        <td class="num">${num(r.distancia_km, 1)} km</td><td class="esconde-celular">${esc(r.pilotos)}</td><td class="num">${dataBR(r.data)}</td><td class="num rec-${c}">${t}</td></tr>`; }).join("")}</tbody></table></div>
+      ${saem.length || erros.length ? `<div class="previa-lista" style="margin-top:10px">
+        ${saem.length ? `<h4>Saem da aba Records (não estão na planilha)</h4><ul>${saem.map(a => `<li>${esc(a.rampa)} (${num(a.distancia_km, 1)} km)</li>`).join("")}</ul>` : ""}
+        ${erros.length ? `<h4>Linhas ignoradas</h4><ul>${erros.map(e => `<li>${esc(e)}</li>`).join("")}</ul>` : ""}</div>` : ""}
+      <button class="btn" id="recAplicar">Substituir lista de records (${lista.length})</button>`;
+    $("recPrevia").hidden = false;
+    $("recAplicar").addEventListener("click", aplicarRecords);
+  } catch (e) { aviso($("recAviso"), "Não foi possível ler a planilha: " + e.message, "erro"); }
+});
+async function aplicarRecords() {
+  if (!confirm(`Substituir a lista de records pela planilha (${recLista.length} rampas)?`)) return;
+  $("recAplicar").disabled = true;
+  const p_lista = recLista.map(({ rampa_id, rampa_nome, distancia_km, pilotos, data }) => ({ rampa_id, rampa_nome, distancia_km, pilotos, data }));
+  const { data, error } = await sb.rpc("substituir_records", { p_lista });
+  if (error) { $("recAplicar").disabled = false; return aviso($("recAviso"), "Erro ao atualizar: " + error.message, "erro"); }
+  $("recPrevia").hidden = true;
+  aviso($("recAviso"), `Records atualizados: ${data} rampa(s).`, "ok");
+  records = await rest("records?select=*&order=distancia_km.desc");
+  desenharRecords(); admDesenharRecordsAtuais();
+}
+
+// ---------- encerramento de temporada ----------
+async function admCarregarTemporada() {
+  const atual = $("tmpAno").value;
+  let vs = [], ss = [];
+  try {
+    [vs, ss] = await Promise.all([
+      admTodos(() => sb.from("voos").select("temporada")),
+      admTodos(() => sb.from("temporadas_salvas").select("temporada,salvo_em")),
+    ]);
+  } catch (e) { $("tmpStatus").textContent = "Erro ao carregar: " + e.message; return; }
+  const anos = [...new Set([...(vs || []).map(v => v.temporada), ...(ss || []).map(s => s.temporada), new Date().getFullYear()])].sort((a, b) => b - a);
+  $("tmpAno").innerHTML = anos.map(a => `<option ${String(a) === atual ? "selected" : ""}>${a}</option>`).join("");
+  const ano = +$("tmpAno").value;
+  const nVoos = (vs || []).filter(v => v.temporada === ano).length;
+  const salvas = (ss || []).filter(s => s.temporada === ano);
+  const quando = salvas.reduce((m, s) => (s.salvo_em > m ? s.salvo_em : m), "");
+  $("tmpStatus").innerHTML = `Temporada ${ano}: <b>${nVoos}</b> voo(s) gravado(s). ` + (salvas.length
+    ? `Tabela final salva em ${new Date(quando).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}, com ${salvas.length} piloto(s).`
+    : "Tabela final ainda não salva.");
+  $("tmpSalvar").textContent = salvas.length ? `Salvar de novo a temporada ${ano}` : `Salvar temporada ${ano}`;
+  $("tmpApagarVoos").textContent = `Apagar voos da temporada ${ano}`;
+}
+$("tmpAno").addEventListener("change", admCarregarTemporada);
+function admMostrarAberta() {
+  const a = new Date().getFullYear();
+  $("tmpAberta").innerHTML = [a - 1, a, a + 1].map(x => `<option ${x === temporadaAberta ? "selected" : ""}>${x}</option>`).join("");
+  $("tmpAbertaInfo").textContent = `Hoje o sistema aceita só voos de ${temporadaAberta}. Voos de outros anos são recusados no envio.`;
+}
+$("tmpAbertaSalvar").addEventListener("click", async () => {
+  const ano = $("tmpAberta").value;
+  const { error } = await sb.from("parametros").upsert({ chave: "temporada_aberta", valor: ano, descricao: "ano dos voos aceitos no envio" });
+  if (error) return alert("Não foi possível salvar: " + error.message);
+  temporadaAberta = +ano; admMostrarAberta();
+  $("avisoTemporada").textContent = `São aceitos voos da temporada ${temporadaAberta}.`;
+});
+$("tmpSalvar").addEventListener("click", async () => {
+  const ano = +$("tmpAno").value;
+  limpar($("tmpAviso")); $("tmpSalvar").disabled = true;
+  const { data, error } = await sb.rpc("salvar_temporada", { p_ano: ano });
+  $("tmpSalvar").disabled = false;
+  if (error) return aviso($("tmpAviso"), error.message, "erro");
+  aviso($("tmpAviso"), `Temporada ${ano} salva: ${data} piloto(s) na tabela final.`, "ok");
+  admCarregarTemporada();
+});
+$("tmpApagarVoos").addEventListener("click", async () => {
+  const ano = +$("tmpAno").value, frase = `APAGAR ${ano}`;
+  limpar($("tmpPerigoAviso"));
+  const r = prompt(`Isto apaga TODOS os voos de ${ano} e os traçados do mapa. Não tem volta.\n\nPara confirmar, digite: ${frase}`);
+  if (r === null) return;
+  if (r.trim().toUpperCase() !== frase) return aviso($("tmpPerigoAviso"), "Confirmação incorreta. Nada foi apagado.", "erro");
+  $("tmpApagarVoos").disabled = true;
+  const { data, error } = await sb.rpc("apagar_voos_temporada", { p_ano: ano });
+  if (error) { $("tmpApagarVoos").disabled = false; return aviso($("tmpPerigoAviso"), error.message, "erro"); }
+  const caminhos = (data || []).map(x => typeof x === "string" ? x : Object.values(x)[0]).filter(Boolean);
+  let falhas = 0;
+  for (let i = 0; i < caminhos.length; i += 100) {
+    const { error: e } = await sb.storage.from("tracados").remove(caminhos.slice(i, i + 100));
+    if (e) falhas++;
+  }
+  $("tmpApagarVoos").disabled = false;
+  aviso($("tmpPerigoAviso"), `${caminhos.length} voo(s) de ${ano} apagado(s).` + (falhas ? " Alguns traçados não saíram do Storage; dá para apagar a pasta manualmente." : ""), falhas ? "erro" : "ok");
+  await admCarregarTemporada(); await admCarregarVoos(); await carregarBase();
+});
+$("tmpApagarPilotos").addEventListener("click", async () => {
+  const frase = "APAGAR PILOTOS";
+  limpar($("tmpPerigoAviso"));
+  const r = prompt(`Isto apaga TODOS os pilotos e os PINs cadastrados. Não tem volta.\n\nPara confirmar, digite: ${frase}`);
+  if (r === null) return;
+  if (r.trim().toUpperCase() !== frase) return aviso($("tmpPerigoAviso"), "Confirmação incorreta. Nada foi apagado.", "erro");
+  const { data, error } = await sb.rpc("apagar_todos_pilotos");
+  if (error) return aviso($("tmpPerigoAviso"), error.message, "erro");
+  aviso($("tmpPerigoAviso"), `${data} piloto(s) apagado(s). Importe a nova lista na aba Pilotos.`, "ok");
+  await admCarregarPilotos(); await carregarBase();
+});
+
+
+// ---------- indicador ONLINE / OFFLINE ----------
+function marcarConexao(on) {
+  const el = $("conexao");
+  el.className = "conexao " + (on ? "on" : "off");
+  el.querySelector("span").textContent = on ? "ONLINE" : "OFFLINE";
+  el.title = on ? "Conectado ao servidor do XC Paraná" : "Sem conexão com o servidor: não é possível enviar voos agora";
+}
+async function verificarConexao() {
+  if (!navigator.onLine) return marcarConexao(false);
+  const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/parametros?select=chave&limit=1`, { headers: { apikey: PUBLISHABLE_KEY }, signal: ctrl.signal, cache: "no-store" });
+    marcarConexao(r.ok);
+  } catch { marcarConexao(false); }
+  finally { clearTimeout(t); }
+}
+addEventListener("offline", () => marcarConexao(false));
+addEventListener("online", verificarConexao);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") verificarConexao(); });
+setInterval(() => { if (document.visibilityState === "visible") verificarConexao(); }, 60000);
+verificarConexao();
+
+// ---------- carga inicial ----------
+// mesma contagem do painel do Power BI: pilotos de cada categoria
+function contarCategorias(ps) {
+  const cont = { OPEN: ps.filter(p => p.categoria === "OPEN").length, SPORT: ps.filter(p => p.categoria === "SPORT").length, LITE: ps.filter(p => p.categoria === "LITE").length, FEMININO: ps.filter(p => p.sexo === "F").length };
+  for (const k in cont) $(`n-${k}`).textContent = `${cont[k]} pilotos`;
+  $("inscritos").textContent = `${ps.length} pilotos ${modoSalvo ? "na tabela final" : "inscritos"}`;
+}
+let temporadaLigada = false;
+async function carregarBase() {
+  try {
+    const [ps, rs, par, recs, temps0, salvas] = await Promise.all([
+      rest("pilotos?select=id,nome,categoria,sexo&ativo=eq.true"),
+      rest("rampas?select=id,nome"),
+      rest("parametros?select=chave,valor&chave=in.(modelo_distancia,temporada_aberta)"),
+      rest("records?select=*&order=distancia_km.desc"),
+      rest("voos?select=temporada&anulado=is.false"),
+      rest("temporadas_salvas?select=temporada").catch(() => []),
+    ]);
+    anosSalvos = [...new Set(salvas.map(t => t.temporada))];
+    const temps = [...temps0, ...anosSalvos.map(a => ({ temporada: a }))];
+    pilotos = new Map(ps.map(p => [p.id, p])); listaPilotos = [...ps].sort((a, b) => a.nome.localeCompare(b.nome)); rampas = new Map(rs.map(r => [r.id, r.nome]));
+    const prm = Object.fromEntries(par.map(x => [x.chave, x.valor]));
+    modelo = prm.modelo_distancia || "esfera"; records = recs;
+    temporadaAberta = +(prm.temporada_aberta || new Date().getFullYear());
+    $("avisoTemporada").textContent = `São aceitos voos da temporada ${temporadaAberta}.`;
+    contarCategorias(ps);
+    const anos = [...new Set([new Date().getFullYear(), ...temps.map(t => t.temporada)])].sort((a, b) => b - a);
+    const comVoos = temps.length ? Math.max(...temps.map(t => t.temporada)) : anos[0];
+    temporada = anos.includes(new Date().getFullYear()) && temps.some(t => t.temporada === new Date().getFullYear()) ? new Date().getFullYear() : comVoos;
+    $("temporada").innerHTML = anos.map(a => `<option ${a === temporada ? "selected" : ""}>${a}</option>`).join("");
+    if (!temporadaLigada) { temporadaLigada = true; $("temporada").addEventListener("change", e => { temporada = +e.target.value; carregarTemporada(); }); }
+    desenharRecords();
+    await carregarTemporada();
+  } catch (e) {
+    $("tabRanking").innerHTML = `<div class="vazio">Não foi possível carregar os dados. Verifique sua conexão e recarregue a página.</div>`;
+    aviso($("pilotoStatus"), "Não foi possível carregar a lista de pilotos. Verifique sua conexão e recarregue a página.", "erro");
+  }
+}
+const basePronta = carregarBase();
+irPara(location.hash.slice(1));
+
+</script>
+</body>
+</html>
