@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>XC Paraná 2026 Beta</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="favicon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#071a2e">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:ital,wght@0,600;0,800;1,800&family=Source+Sans+3:wght@400;600;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
@@ -23,7 +28,7 @@
   :focus-visible{outline:3px solid var(--lago); outline-offset:2px}
 
   header{display:flex; align-items:center; gap:16px; padding:6px 0 14px}
-  header img{width:86px; height:auto; aspect-ratio:228/296; object-fit:cover; object-position:50% 18%; flex:none; filter:drop-shadow(0 8px 18px rgba(0,0,0,.45))}
+  header img{width:78px; height:auto; flex:none; filter:drop-shadow(0 8px 18px rgba(0,0,0,.45))}
   header h1{font-family:var(--display); font-weight:800; font-style:italic; font-size:clamp(30px,6vw,44px); line-height:1; margin:0}
   header p{color:var(--nevoa); font-size:15px; margin:4px 0 0}
 
@@ -251,7 +256,7 @@
   .rodape{text-align:center; color:var(--nevoa); font-size:13px; margin-top:26px}
 
   @media (max-width:640px){
-    header img{width:64px}
+    header img{width:60px}
     .categorias{grid-template-columns:repeat(2,1fr)}
     .esconde-celular{display:none}
     .so-celular{display:inline}
@@ -269,7 +274,7 @@
 <body>
 <div class="wrap">
   <header>
-    <img src="https://raw.githubusercontent.com/arthurgr89/logos-parapente/main/CXP/2026%20SF%20-%20refuzido.png" alt="XC Paraná" width="300" height="450">
+    <img src="logo-xc-parana.png" alt="XC Paraná" width="312" height="400">
     <div>
       <h1>XC Paraná 2026 <span class="beta">Beta</span></h1>
       <p>Ranking, envio de voos e verificação de espaço aéreo.</p>
@@ -510,7 +515,7 @@
     </div>
   </section>
 
-  <p class="rodape">Ranking: soma dos 7 melhores voos de cada piloto, com no máximo 2 por rampa.<br>Desenvolvido por Arthur Grandini Rodella (Tutu) · <a href="#admin" id="linkAdmin">Área do organizador</a></p>
+  <p class="rodape"><span id="textoRegra">Ranking: soma dos 7 melhores voos de cada piloto, com no máximo 2 por rampa.</span><br>Desenvolvido por Arthur Grandini Rodella (Tutu) · <a href="#admin" id="linkAdmin">Área do organizador</a></p>
 </div>
 
 <dialog id="modal" aria-labelledby="modalTitulo">
@@ -556,6 +561,7 @@ async function rest(caminho) {
 let pilotos = new Map(), listaPilotos = [], rampas = new Map(), modelo = "esfera";
 let contam = [], todosVoos = [], records = [], excluidos = [];
 let modoSalvo = false, pilotosSalvos = new Map(), anosSalvos = [], temporadaAberta = new Date().getFullYear();
+let regra = { total: 7, porRampa: 2, porRegiao: null, motivo: "limite de 2 por rampa ou fora dos 7 melhores" };
 const pil = id => pilotosSalvos.get(id) || pilotos.get(id);
 const nomeRampa = v => v.rampa_nome || rampas.get(v.rampa_id) || "";
 let categoria = "OPEN", temporada = null, limiteTop = 50;
@@ -584,7 +590,7 @@ function desenharRanking() {
       <td class="pos">${med ? `<span class="med" aria-label="${pos}º">${med}</span>` : pos}</td>
       <td><span class="nome ${l.p.sexo === "F" ? "f" : ""}">${esc(l.p.nome)}</span><span class="seta" aria-hidden="true">›</span><span class="cat so-celular"><br>${l.p.categoria}</span></td>
       <td class="cat esconde-celular">${l.p.categoria}</td>
-      <td class="num esconde-celular">${l.voos.length}/7</td>
+      <td class="num esconde-celular">${l.voos.length}/${regra.total}</td>
       <td class="num total">${num(l.total)}</td></tr>`;
   }).join("");
   $("tabRanking").innerHTML = `<table><thead><tr><th class="pos">#</th><th>Piloto</th><th class="esconde-celular">Cat.</th><th class="num esconde-celular">Voos</th><th class="num">Pontos</th></tr></thead><tbody>${corpo}</tbody></table>`;
@@ -620,7 +626,7 @@ function alternarPiloto(tr, info) {
     e.stopPropagation();
     const t = det.querySelector(".voos"), aberto = t.classList.toggle("mostra-fora");
     bt.setAttribute("aria-expanded", aberto);
-    bt.textContent = aberto ? "Esconder voos que não contam (em cinza: limite de 2 por rampa ou fora dos 7 melhores)" : `Ver os outros ${fora.length} voo${fora.length > 1 ? "s" : ""} da temporada`;
+    bt.textContent = aberto ? `Esconder voos que não contam (em cinza: ${regra.motivo})` : `Ver os outros ${fora.length} voo${fora.length > 1 ? "s" : ""} da temporada`;
   });
   ligarVoos(det);
 }
@@ -1813,7 +1819,7 @@ async function carregarBase() {
     const [ps, rs, par, recs, temps0, salvas] = await Promise.all([
       rest("pilotos?select=id,nome,categoria,sexo&ativo=eq.true"),
       rest("rampas?select=id,nome"),
-      rest("parametros?select=chave,valor&chave=in.(modelo_distancia,temporada_aberta)"),
+      rest("parametros?select=chave,valor&chave=in.(modelo_distancia,temporada_aberta,voos_no_ranking,voos_por_rampa,voos_por_regiao)"),
       rest("records?select=*&order=distancia_km.desc"),
       rest("voos?select=temporada&anulado=is.false"),
       rest("temporadas_salvas?select=temporada").catch(() => []),
@@ -1824,6 +1830,10 @@ async function carregarBase() {
     const prm = Object.fromEntries(par.map(x => [x.chave, x.valor]));
     modelo = prm.modelo_distancia || "esfera"; records = recs;
     temporadaAberta = +(prm.temporada_aberta || new Date().getFullYear());
+    // regra do ranking vem dos parâmetros (por rampa, por região e total)
+    regra.total = +prm.voos_no_ranking || 7; regra.porRampa = +prm.voos_por_rampa || 2; regra.porRegiao = +prm.voos_por_regiao || null;
+    regra.motivo = `limite de ${regra.porRampa} por rampa${regra.porRegiao ? `, de ${regra.porRegiao} por região` : ""} ou fora dos ${regra.total} melhores`;
+    $("textoRegra").textContent = `Ranking: soma dos ${regra.total} melhores voos de cada piloto, com no máximo ${regra.porRampa} por rampa${regra.porRegiao ? ` e ${regra.porRegiao} por região` : ""}.`;
     $("avisoTemporada").textContent = `São aceitos voos da temporada ${temporadaAberta}.`;
     contarCategorias(ps);
     const anos = [...new Set([new Date().getFullYear(), ...temps.map(t => t.temporada)])].sort((a, b) => b - a);
