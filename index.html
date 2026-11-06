@@ -28,7 +28,9 @@
   :focus-visible{outline:3px solid var(--lago); outline-offset:2px}
 
   header{display:flex; align-items:center; gap:16px; padding:6px 0 14px}
-  header img{width:78px; height:auto; flex:none; filter:drop-shadow(0 8px 18px rgba(0,0,0,.45))}
+  #logoHome{flex:none; display:block; line-height:0; border-radius:12px}
+  #logoHome:hover img{transform:scale(1.04)}
+  header img{transition:transform .15s; width:78px; height:auto; flex:none; filter:drop-shadow(0 8px 18px rgba(0,0,0,.45))}
   header h1{font-family:var(--display); font-weight:800; font-style:italic; font-size:clamp(30px,6vw,44px); line-height:1; margin:0}
   header p{color:var(--nevoa); font-size:15px; margin:4px 0 0}
 
@@ -274,7 +276,7 @@
 <body>
 <div class="wrap">
   <header>
-    <img src="logo-xc-parana.png" alt="XC Paraná" width="312" height="400">
+    <a href="#ranking" id="logoHome" aria-label="Ir para o ranking"><img src="logo-xc-parana.png" alt="XC Paraná" width="312" height="400"></a>
     <div>
       <h1>XC Paraná 2026 <span class="beta">Beta</span></h1>
       <p>Ranking, envio de voos e verificação de espaço aéreo.</p>
@@ -1148,6 +1150,7 @@ function irPara(pag) {
   Object.values(mapasRes).forEach(m => m.invalidateSize());
 }
 document.querySelectorAll(".principal button").forEach(b => b.addEventListener("click", () => irPara(b.dataset.pag)));
+$("logoHome").addEventListener("click", e => { e.preventDefault(); irPara("ranking"); scrollTo({ top: 0, behavior: "smooth" }); });
 $("linkAdmin").addEventListener("click", e => { e.preventDefault(); irPara("admin"); scrollTo({ top: 0, behavior: "smooth" }); });
 $("ctaEnviar").addEventListener("click", e => { e.preventDefault(); irPara("enviar"); $("p-enviar").scrollIntoView({ behavior: "smooth", block: "start" }); });
 
@@ -1190,7 +1193,8 @@ async function admConfirmar(session) {
     const anos = [...$("temporada").options].map(o => o.value);
     $("admTemporada").innerHTML = anos.map(a => `<option ${+a === temporada ? "selected" : ""}>${a}</option>`).join("");
   }
-  await Promise.all([admCarregarPilotos(), admCarregarVoos(), admCarregarEA(), admCarregarTemporada(), admCarregarRampas()]);
+  await admCarregarPilotos();   // os nomes precisam estar prontos antes da lista de voos
+  await Promise.all([admCarregarVoos(), admCarregarEA(), admCarregarTemporada(), admCarregarRampas()]);
   admDesenharRecordsAtuais(); admMostrarAberta();
   return true;
 }
@@ -1218,6 +1222,7 @@ async function admCarregarPilotos() {
     ]);
     admPilotos = ps; admComPin = new Set(pins.map(p => p.piloto_id));
     admDesenharPilotos();
+    if (admVoos.length) admDesenharVoos();
   } catch (e) { $("admTabPilotos").innerHTML = `<div class="vazio">Erro ao carregar pilotos: ${esc(e.message)}</div>`; }
 }
 function admDesenharPilotos() {
