@@ -209,6 +209,9 @@
   .zona-perigo h2{color:var(--perigo)}
   .btn.perigo{background:none; border:2px solid var(--perigo); color:var(--perigo)}
   .btn.perigo:hover{background:rgba(255,107,107,.1); filter:none}
+  .rmp-tab input[type=text], .rmp-tab input[type=number]{font:14px var(--corpo); color:var(--neve); background:var(--noite); border:1px solid var(--linha); border-radius:8px; padding:6px 8px; width:100%}
+  .rmp-tab .coord{min-width:190px} .rmp-tab .raio{width:80px}
+  .alerta-forte{color:var(--perigo); font-weight:700}
   .rec-novo{color:var(--vela); font-weight:700} .rec-mudou{color:var(--sol); font-weight:700} .rec-igual{color:var(--nevoa)}
   .status-temp{background:var(--noite); border-radius:10px; padding:10px 14px; margin:8px 0 0; font-size:14.5px}
   .nota-topo{color:var(--nevoa); font-size:14.5px; margin:0 2px 10px}
@@ -388,6 +391,7 @@
       <div class="visoes" role="tablist">
         <button role="tab" aria-selected="true" data-adm="pilotos">Pilotos</button>
         <button role="tab" aria-selected="false" data-adm="voos">Voos</button>
+        <button role="tab" aria-selected="false" data-adm="rampas">Rampas</button>
         <button role="tab" aria-selected="false" data-adm="ea">Espaço aéreo</button>
         <button role="tab" aria-selected="false" data-adm="records">Records</button>
         <button role="tab" aria-selected="false" data-adm="temporada">Temporada</button>
@@ -414,6 +418,28 @@
         </div>
         <div class="adm-filtros"><input type="text" id="admBuscaPiloto" placeholder="Buscar piloto"></div>
         <div class="tabela" id="admTabPilotos"><div class="vazio">Carregando…</div></div>
+      </div>
+
+      <div class="adm-aba" id="adm-rampas" hidden>
+        <div class="painel">
+          <h2>Importar rampas (Excel)</h2>
+          <p class="dica">No mesmo formato da sua planilha: uma linha com o nome da região (ex.: "Região Sudeste") e, abaixo, cada rampa com a coordenada (ex.: 25°23'11.5"S 49°33'08.8"W). Rampas já cadastradas são reconhecidas pelo nome ou pela posição, então uma rampa renomeada mantém os voos e o record.</p>
+          <input type="file" id="rmpArquivo" accept=".xlsx,.xls" hidden>
+          <button class="btn contorno" id="rmpEscolher" style="margin-top:0">Escolher planilha de rampas</button>
+          <div class="aviso" id="rmpAviso"></div>
+          <div id="rmpPrevia" hidden></div>
+        </div>
+        <div class="painel">
+          <h2>Adicionar rampa</h2>
+          <div class="adm-form" style="grid-template-columns:1.4fr 1fr 1.6fr auto">
+            <div class="nome-novo"><label for="rmpNome">Nome</label><input type="text" id="rmpNome" autocomplete="off"></div>
+            <div><label for="rmpRegiao">Região</label><input type="text" id="rmpRegiao" placeholder="Ex.: Sudeste" autocomplete="off"></div>
+            <div class="nome-novo"><label for="rmpCoord">Coordenada da decolagem</label><input type="text" id="rmpCoord" placeholder="25°23'11.5&quot;S 49°33'08.8&quot;W ou -25.38653, -49.55244" autocomplete="off"></div>
+            <button class="btn" id="rmpAdicionar">Adicionar</button>
+          </div>
+          <div class="aviso" id="rmpAddAviso"></div>
+        </div>
+        <div class="tabela" id="rmpTabela"><div class="vazio">Carregando…</div></div>
       </div>
 
       <div class="adm-aba" id="adm-ea" hidden>
@@ -1158,7 +1184,7 @@ async function admConfirmar(session) {
     const anos = [...$("temporada").options].map(o => o.value);
     $("admTemporada").innerHTML = anos.map(a => `<option ${+a === temporada ? "selected" : ""}>${a}</option>`).join("");
   }
-  await Promise.all([admCarregarPilotos(), admCarregarVoos(), admCarregarEA(), admCarregarTemporada()]);
+  await Promise.all([admCarregarPilotos(), admCarregarVoos(), admCarregarEA(), admCarregarTemporada(), admCarregarRampas()]);
   admDesenharRecordsAtuais(); admMostrarAberta();
   return true;
 }
@@ -1445,6 +1471,155 @@ async function admCarregarEA() {
 }
 
 
+
+
+// ---------- rampas ----------
+let rmpLista = [], rmpPlan = null, rmpWb = null;
+const RAIO_PADRAO = 1500;
+function lerCoordenada(txt) {
+  const t = String(txt ?? "").replace(/[’′‘´`]/g, "'").replace(/[”″“]|''/g, '"').trim();
+  // graus, minutos e segundos: 25°23'11.5"S 49°33'08.8"W
+  const dms = [...t.matchAll(/(\d+(?:[.,]\d+)?)\s*°\s*(?:(\d+(?:[.,]\d+)?)\s*'\s*)?(?:(\d+(?:[.,]\d+)?)\s*"\s*)?([NSEWLO])/gi)];
+  if (dms.length === 2) {
+    const v = m => { let x = +m[1].replace(",", ".") + (+(m[2] || "0").replace(",", ".")) / 60 + (+(m[3] || "0").replace(",", ".")) / 3600; return /[SWO]/i.test(m[4]) ? -x : x; };
+    const a = v(dms[0]), b = v(dms[1]);
+    const lat = /[NS]/i.test(dms[0][4]) ? a : b, lon = /[NS]/i.test(dms[0][4]) ? b : a;
+    if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180) return { lat: +lat.toFixed(5), lon: +lon.toFixed(5) };
+  }
+  // decimal: -25.38653, -49.55244
+  const dec = t.match(/^(-?\d+(?:\.\d+)?)\s*[,; ]\s*(-?\d+(?:\.\d+)?)$/);
+  if (dec && Math.abs(+dec[1]) <= 90 && Math.abs(+dec[2]) <= 180) return { lat: +(+dec[1]).toFixed(5), lon: +(+dec[2]).toFixed(5) };
+  return null;
+}
+const distKm = (a, b) => { const R = 6371, r = Math.PI / 180, h = Math.sin((b.lat - a.lat) * r / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin((b.lon - a.lon) * r / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+
+async function admCarregarRampas() {
+  const { data, error } = await sb.from("rampas").select("id,nome,regiao,latitude,longitude,raio_m,ativa").order("regiao").order("nome");
+  if (error) return $("rmpTabela").innerHTML = `<div class="vazio">Erro ao carregar rampas: ${esc(error.message)}</div>`;
+  rmpLista = data; admDesenharRampas();
+}
+function admDesenharRampas() {
+  $("rmpTabela").innerHTML = `<table class="rmp-tab"><thead><tr><th>Rampa</th><th class="esconde-celular">Região</th><th>Coordenada (lat, lon)</th><th class="esconde-celular">Raio (m)</th><th>Ativa</th><th></th></tr></thead><tbody>${rmpLista.map(r => `
+    <tr data-id="${r.id}">
+      <td><input type="text" data-c="nome" value="${esc(r.nome)}"></td>
+      <td class="esconde-celular"><input type="text" data-c="regiao" value="${esc(r.regiao || "")}"></td>
+      <td><input type="text" class="coord" data-c="coord" value="${r.latitude}, ${r.longitude}"></td>
+      <td class="esconde-celular"><input type="number" class="raio" data-c="raio_m" min="300" max="5000" step="100" value="${r.raio_m}"></td>
+      <td><input type="checkbox" data-c="ativa" ${r.ativa ? "checked" : ""} aria-label="Rampa ativa"></td>
+      <td><button class="acao" data-salvar disabled>Salvar</button></td>
+    </tr>`).join("")}</tbody></table>`;
+  $("rmpTabela").querySelectorAll("tr[data-id]").forEach(tr => {
+    const bt = tr.querySelector("[data-salvar]");
+    tr.querySelectorAll("[data-c]").forEach(el => el.addEventListener(el.type === "checkbox" ? "change" : "input", () => bt.disabled = false));
+    bt.addEventListener("click", async () => {
+      const g = c => tr.querySelector(`[data-c="${c}"]`);
+      const pos = lerCoordenada(g("coord").value);
+      if (!pos) return alert("Coordenada inválida. Use 25°23'11.5\"S 49°33'08.8\"W ou -25.38653, -49.55244.");
+      const nome = g("nome").value.trim(); if (!nome) return alert("O nome não pode ficar vazio.");
+      const r0 = rmpLista.find(r => r.id === +tr.dataset.id), moveu = distKm({ lat: r0.latitude, lon: r0.longitude }, pos);
+      if (moveu > 1 && !confirm(`A coordenada de ${nome} vai mudar ${moveu.toFixed(1)} km. Confirma?`)) return;
+      const { error } = await sb.from("rampas").update({ nome, regiao: g("regiao").value.trim() || null, latitude: pos.lat, longitude: pos.lon, raio_m: +g("raio_m").value || RAIO_PADRAO, ativa: g("ativa").checked }).eq("id", r0.id);
+      if (error) return alert("Não foi possível salvar: " + (error.code === "23505" ? "já existe outra rampa com esse nome." : error.message));
+      await admCarregarRampas(); carregarBase();
+    });
+  });
+}
+$("rmpAdicionar").addEventListener("click", async () => {
+  limpar($("rmpAddAviso"));
+  const nome = $("rmpNome").value.trim(), regiao = $("rmpRegiao").value.trim().replace(/^regi[aã]o\s+/i, ""), pos = lerCoordenada($("rmpCoord").value);
+  if (!nome) return aviso($("rmpAddAviso"), "Digite o nome da rampa.", "erro");
+  if (!pos) return aviso($("rmpAddAviso"), "Coordenada inválida. Use 25°23'11.5\"S 49°33'08.8\"W ou -25.38653, -49.55244.", "erro");
+  const perto = rmpLista.filter(r => r.ativa).map(r => ({ r, d: distKm({ lat: r.latitude, lon: r.longitude }, pos) })).sort((a, b) => a.d - b.d)[0];
+  if (perto && perto.d < 3 && !confirm(`Atenção: ${perto.r.nome} fica a ${perto.d.toFixed(1)} km. Com raios de 1,5 km, um voo pode ser atribuído à rampa errada. Adicionar mesmo assim?`)) return;
+  const { error } = await sb.from("rampas").insert({ nome, regiao: regiao || null, latitude: pos.lat, longitude: pos.lon, raio_m: RAIO_PADRAO });
+  if (error) return aviso($("rmpAddAviso"), error.code === "23505" ? "Já existe uma rampa com esse nome." : "Erro: " + error.message, "erro");
+  aviso($("rmpAddAviso"), `${nome} adicionada (${pos.lat}, ${pos.lon}). Já vale para os próximos envios.`, "ok");
+  $("rmpNome").value = $("rmpCoord").value = "";
+  await admCarregarRampas(); carregarBase();
+});
+
+// importação da planilha
+$("rmpEscolher").addEventListener("click", () => $("rmpArquivo").click());
+$("rmpArquivo").addEventListener("change", async () => {
+  const f = $("rmpArquivo").files[0]; $("rmpArquivo").value = "";
+  if (!f) return;
+  limpar($("rmpAviso")); $("rmpPrevia").hidden = true; rmpPlan = null;
+  try {
+    await carregarScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js");
+    rmpWb = XLSX.read(await f.arrayBuffer(), { type: "array" });
+    rmpAnalisar(rmpWb.SheetNames[rmpWb.SheetNames.length - 1]);
+  } catch (e) { aviso($("rmpAviso"), "Não foi possível ler a planilha: " + e.message, "erro"); }
+});
+function rmpAnalisar(aba) {
+  const linhas = XLSX.utils.sheet_to_json(rmpWb.Sheets[aba], { header: 1, defval: "" });
+  let regiao = null; const lista = [], erros = [];
+  linhas.forEach((l, i) => {
+    const a = String(l[0] ?? "").trim(), b = String(l[1] ?? "").trim();
+    if (!a && !b) return;
+    if (!b) { regiao = a.replace(/^regi[aã]o\s+/i, "").trim() || regiao; return; }
+    const pos = lerCoordenada(b);
+    if (!pos) return erros.push(`Linha ${i + 1}: ${a}, coordenada "${b}" não reconhecida`);
+    lista.push({ nome: a, regiao, ...pos });
+  });
+  if (!lista.length) return aviso($("rmpAviso"), "Nenhuma rampa encontrada nessa aba.", "erro");
+  // casa com as rampas existentes: pelo nome; se não, pela posição (até 300 m)
+  const usadas = new Set();
+  for (const n of lista) {
+    let e = rmpLista.find(r => !usadas.has(r.id) && normal(r.nome) === normal(n.nome));
+    if (!e) e = rmpLista.filter(r => !usadas.has(r.id)).map(r => ({ r, d: distKm({ lat: r.latitude, lon: r.longitude }, n) })).filter(x => x.d <= 0.3).sort((x, y) => x.d - y.d)[0]?.r;
+    if (e) { usadas.add(e.id); n.existe = e; n.moveu = distKm({ lat: e.latitude, lon: e.longitude }, n); }
+  }
+  // rampas muito próximas entre si (risco de voo na rampa errada)
+  const conflitos = [];
+  for (let i = 0; i < lista.length; i++) for (let j = i + 1; j < lista.length; j++) {
+    const d = distKm(lista[i], lista[j]);
+    if (d < 3) conflitos.push(`${lista[i].nome} e ${lista[j].nome} estão a ${d < 0.05 ? "0" : num(d, 1)} km uma da outra`);
+  }
+  const novas = lista.filter(n => !n.existe);
+  const mud = lista.filter(n => n.existe && (n.existe.nome !== n.nome || (n.existe.regiao || "") !== (n.regiao || "") || n.moveu > 0.01 || !n.existe.ativa));
+  const fora = rmpLista.filter(r => r.ativa && !usadas.has(r.id));
+  rmpPlan = { novas, mud, fora };
+  const desc = n => { const e = n.existe, d = [];
+    if (e.nome !== n.nome) d.push(`renomeada de <span class="de">${esc(e.nome)}</span>`);
+    if ((e.regiao || "") !== (n.regiao || "")) d.push(`região ${esc(e.regiao || "—")} → ${esc(n.regiao || "—")}`);
+    if (n.moveu > 1) d.push(`<span class="alerta-forte">coordenada muda ${num(n.moveu, 1)} km</span>`);
+    else if (n.moveu > 0.01) d.push(`coordenada ajustada ${Math.round(n.moveu * 1000)} m`);
+    if (!e.ativa) d.push("reativada");
+    return `<b>${esc(n.nome)}</b>: ${d.join(", ")}`; };
+  const abas = rmpWb.SheetNames.length > 1 ? `<label for="rmpAba">Aba da planilha</label><select id="rmpAba">${rmpWb.SheetNames.map(n => `<option ${n === aba ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>` : "";
+  $("rmpPrevia").innerHTML = `${abas}
+    <div class="previa-resumo"><span>${lista.length} rampa(s) na aba</span><span>${novas.length} nova(s)</span><span>${mud.length} alterada(s)</span>${erros.length ? `<span style="color:var(--perigo)">${erros.length} com erro</span>` : ""}</div>
+    ${conflitos.length ? `<div class="aviso mostra erro" style="margin:0 0 10px"><b>Rampas próximas demais</b> (com raio de 1,5 km, um voo pode cair na rampa errada). Confira as coordenadas antes de importar:<br>${conflitos.map(esc).join("<br>")}</div>` : ""}
+    <div class="previa-lista">
+      ${novas.length ? `<h4>Novas</h4><ul>${novas.map(n => `<li><b>${esc(n.nome)}</b> (${esc(n.regiao || "sem região")}): ${n.lat}, ${n.lon}</li>`).join("")}</ul>` : ""}
+      ${mud.length ? `<h4>Alteradas</h4><ul>${mud.map(n => `<li>${desc(n)}</li>`).join("")}</ul>` : ""}
+      ${erros.length ? `<h4>Ignoradas</h4><ul>${erros.map(e => `<li>${esc(e)}</li>`).join("")}</ul>` : ""}
+      ${!novas.length && !mud.length && !erros.length ? "<p>Nenhuma diferença em relação ao cadastro atual.</p>" : ""}
+    </div>
+    ${fora.length ? `<label class="marcar"><input type="checkbox" id="rmpDesativar"> <span>Desativar ${fora.length} rampa(s) que não estão nesta aba: ${fora.map(r => esc(r.nome)).join(", ")}. Voos e records delas continuam gravados.</span></label>` : ""}
+    <button class="btn" id="rmpAplicar" ${conflitos.length ? "disabled" : ""}>${conflitos.length ? "Corrija as rampas próximas demais para importar" : "Aplicar importação"}</button>`;
+  $("rmpPrevia").hidden = false;
+  $("rmpAba")?.addEventListener("change", e => rmpAnalisar(e.target.value));
+  $("rmpAplicar").addEventListener("click", rmpAplicar);
+}
+async function rmpAplicar() {
+  const { novas, mud, fora } = rmpPlan, desativar = $("rmpDesativar")?.checked;
+  const longe = mud.filter(n => n.moveu > 1);
+  if (longe.length && !confirm(`Atenção: a coordenada de ${longe.map(n => n.nome).join(", ")} muda mais de 1 km. Confirma a importação?`)) return;
+  $("rmpAplicar").disabled = true;
+  for (const n of mud) {
+    const { error } = await sb.from("rampas").update({ nome: n.nome, regiao: n.regiao, latitude: n.lat, longitude: n.lon, ativa: true }).eq("id", n.existe.id);
+    if (error) { $("rmpAplicar").disabled = false; return aviso($("rmpAviso"), `Erro em ${n.nome}: ${error.message}`, "erro"); }
+  }
+  if (novas.length) {
+    const { error } = await sb.from("rampas").insert(novas.map(n => ({ nome: n.nome, regiao: n.regiao, latitude: n.lat, longitude: n.lon, raio_m: RAIO_PADRAO })));
+    if (error) { $("rmpAplicar").disabled = false; return aviso($("rmpAviso"), "Erro ao inserir rampas novas: " + error.message, "erro"); }
+  }
+  if (desativar && fora.length) await sb.from("rampas").update({ ativa: false }).in("id", fora.map(r => r.id));
+  $("rmpPrevia").hidden = true;
+  aviso($("rmpAviso"), `Rampas atualizadas: ${novas.length} nova(s), ${mud.length} alterada(s)${desativar && fora.length ? `, ${fora.length} desativada(s)` : ""}. Já valem para os próximos envios.`, "ok");
+  await admCarregarRampas(); carregarBase();
+}
 
 // ---------- records (só pela planilha oficial) ----------
 let recLista = null;
