@@ -356,7 +356,7 @@
       </div>
       <div class="zona" id="zonaEnviar" tabindex="0" role="button">
         <strong>Escolher arquivos IGC</strong><span>Um ou vários .igc, ou um .zip. Até 10 voos por vez.</span>
-        <input type="file" accept=".igc,.IGC,.zip,.ZIP,application/zip" multiple>
+        <input type="file" accept=".igc,.IGC,.zip,.ZIP,application/zip,.txt,.TXT,text/plain" multiple>
         <ul class="arquivos-lista" hidden></ul>
       </div>
       <button class="btn" id="enviar" disabled>Enviar voo</button>
@@ -373,7 +373,7 @@
       <p class="dica">Confira seu voo antes de enviar. Nada é gravado e não precisa de PIN.</p>
       <div class="zona" id="zonaVerificar" tabindex="0" role="button">
         <strong>Escolher arquivos IGC</strong><span>Um ou vários .igc, ou um .zip. Até 10 voos por vez.</span>
-        <input type="file" accept=".igc,.IGC,.zip,.ZIP,application/zip" multiple>
+        <input type="file" accept=".igc,.IGC,.zip,.ZIP,application/zip,.txt,.TXT,text/plain" multiple>
         <ul class="arquivos-lista" hidden></ul>
       </div>
       <button class="btn" id="verificar" disabled>Verificar voo</button>
@@ -901,10 +901,10 @@ async function tipoArquivo(f) {
   // sem extensão conhecida: olha o começo do arquivo
   const ini = new Uint8Array(await f.slice(0, 4).arrayBuffer());
   if (ini[0] === 0x50 && ini[1] === 0x4b) return "zip";                 // "PK" = ZIP
-  const txt = await f.slice(0, 65536).text();
-  if (/^\uFEFF?A/.test(txt.trimStart()) && /\nB\d{6}\d{7}[NS]\d{8}[EW]/.test(txt)) return "igc";   // registro A + registros B
-  return null;
+  return pareceIGC(await f.slice(0, 65536).text()) ? "igc" : null;
 }
+// todo IGC começa com o registro A (fabricante) e tem as linhas B (pontos de GPS), seja .igc, .txt ou sem extensão
+const pareceIGC = txt => /^\uFEFF?A/.test(txt.trimStart()) && /\r?\nB\d{6}\d{7}[NS]\d{8}[EW]/.test(txt);
 
 async function expandir(files) {
   const itens = [], avisos = [];
@@ -915,13 +915,19 @@ async function expandir(files) {
       if (!window.JSZip) { avisos.push("Não foi possível abrir arquivos ZIP agora. Recarregue a página."); continue; }
       try {
         const zip = await JSZip.loadAsync(f);
-        const entradas = Object.values(zip.files).filter(e => !e.dir && /\.igc$/i.test(e.name) && !/(^|\/)__MACOSX\//.test(e.name) && !/(^|\/)\._/.test(e.name));
-        if (!entradas.length) avisos.push(`${f.name} não tem nenhum arquivo .igc.`);
+        const entradas = Object.values(zip.files).filter(e => !e.dir && /\.(igc|txt)$/i.test(e.name) && !/(^|\/)__MACOSX\//.test(e.name) && !/(^|\/)\._/.test(e.name));
+        let achou = 0;
         for (const e of entradas) {
           const tam = e._data && e._data.uncompressedSize;
           if (tam > LIMITE_IGC) { avisos.push(`${e.name} é grande demais.`); continue; }
-          itens.push({ nome: e.name.split("/").pop(), ler: () => e.async("string") });
+          if (/\.txt$/i.test(e.name)) {            // .txt só conta se for um IGC por dentro
+            const conteudo = await e.async("string");
+            if (!pareceIGC(conteudo)) continue;
+            itens.push({ nome: e.name.split("/").pop(), ler: async () => conteudo }); achou++; continue;
+          }
+          itens.push({ nome: e.name.split("/").pop(), ler: () => e.async("string") }); achou++;
         }
+        if (!achou) avisos.push(`${f.name} não tem nenhum arquivo IGC.`);
       } catch { avisos.push(`${f.name} não é um ZIP válido.`); }
     } else if (tipo === "igc") {
       if (f.size > LIMITE_IGC) { avisos.push(`${f.name} é grande demais.`); continue; }
