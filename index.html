@@ -890,10 +890,27 @@ $("pin").addEventListener("input", e => { e.target.value = e.target.value.replac
 const LIMITE_VOOS = 10, LIMITE_ZIP = 7 * 1024 * 1024, LIMITE_IGC = 6 * 1024 * 1024;
 const arquivos = { enviar: [], verificar: [] };   // itens: { nome, ler: () => Promise<string> }
 
+// iPhone/iPad não conhecem a extensão .igc e deixam o arquivo "cinza" no seletor.
+// Nesses aparelhos o seletor aceita qualquer arquivo e o site confere pelo conteúdo.
+const EH_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+if (EH_IOS) document.querySelectorAll('.zona input[type=file]').forEach(i => i.removeAttribute("accept"));
+
+async function tipoArquivo(f) {
+  if (/\.zip$/i.test(f.name)) return "zip";
+  if (/\.igc$/i.test(f.name)) return "igc";
+  // sem extensão conhecida: olha o começo do arquivo
+  const ini = new Uint8Array(await f.slice(0, 4).arrayBuffer());
+  if (ini[0] === 0x50 && ini[1] === 0x4b) return "zip";                 // "PK" = ZIP
+  const txt = await f.slice(0, 65536).text();
+  if (/^\uFEFF?A/.test(txt.trimStart()) && /\nB\d{6}\d{7}[NS]\d{8}[EW]/.test(txt)) return "igc";   // registro A + registros B
+  return null;
+}
+
 async function expandir(files) {
   const itens = [], avisos = [];
   for (const f of files) {
-    if (/\.zip$/i.test(f.name)) {
+    const tipo = await tipoArquivo(f);
+    if (tipo === "zip") {
       if (f.size > LIMITE_ZIP) { avisos.push(`${f.name} passa de 7 MB.`); continue; }
       if (!window.JSZip) { avisos.push("Não foi possível abrir arquivos ZIP agora. Recarregue a página."); continue; }
       try {
@@ -906,10 +923,10 @@ async function expandir(files) {
           itens.push({ nome: e.name.split("/").pop(), ler: () => e.async("string") });
         }
       } catch { avisos.push(`${f.name} não é um ZIP válido.`); }
-    } else if (/\.igc$/i.test(f.name)) {
+    } else if (tipo === "igc") {
       if (f.size > LIMITE_IGC) { avisos.push(`${f.name} é grande demais.`); continue; }
       itens.push({ nome: f.name, ler: () => f.text() });
-    } else avisos.push(`${f.name} foi ignorado (só .igc ou .zip).`);
+    } else avisos.push(`${f.name} foi ignorado: não é um arquivo IGC nem ZIP.`);
   }
   return { itens, avisos };
 }
