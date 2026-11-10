@@ -206,6 +206,34 @@
   .cta:active{transform:translateY(0)}
   .cta[aria-current="page"]{box-shadow:0 0 0 3px rgba(143,214,64,.6), inset 0 -3px 0 rgba(0,0,0,.18)}
   .mais[hidden]{display:none}
+  /* selos e conquistas */
+  .linha2{display:inline-flex; align-items:center; gap:8px; vertical-align:middle; margin-left:10px}
+  .linha2:empty{display:none}
+  .selo-mini{background:none; border:0; padding:0; cursor:pointer; line-height:0; border-radius:8px}
+  .selo-mini img{height:32px; width:auto; filter:drop-shadow(0 2px 6px rgba(0,0,0,.5)); transition:transform .15s}
+  .selo-mini:hover img{transform:scale(1.12) rotate(-4deg)}
+  .btn-conq{display:inline-flex; align-items:center; gap:8px; margin:0 12px 10px; padding:8px 14px; border-radius:999px; cursor:pointer;
+    background:linear-gradient(180deg,rgba(245,181,46,.18),rgba(245,181,46,.06)); border:1px solid rgba(245,181,46,.55); color:var(--sol); font:700 14.5px var(--corpo)}
+  .btn-conq:hover{background:rgba(245,181,46,.22)}
+  .btn-conq b{background:var(--sol); color:#2a1a00; border-radius:999px; padding:0 8px; font-size:13px}
+  #conqModal .conteudo{padding:4px 18px 20px; max-height:calc(94vh - 80px); overflow:auto}
+  .conq-sec{margin:6px 0 18px}
+  .conq-sec h3{font-size:15px; color:var(--nevoa); font-weight:700; margin:0 0 10px}
+  .medalhas{display:grid; grid-template-columns:repeat(auto-fill,minmax(92px,1fr)); gap:12px 10px}
+  .medalha{text-align:center}
+  .medalha img, .medalha .ph{height:112px; width:auto; max-width:100%; display:block; margin:0 auto 6px; filter:drop-shadow(0 6px 14px rgba(0,0,0,.5))}
+  .medalha.bloq img{filter:grayscale(1) brightness(.55); opacity:.45}
+  .medalha .ph{width:88px; height:112px; border:2px dashed var(--linha); border-radius:50% 50% 46% 46%; display:flex; align-items:center; justify-content:center; color:var(--nevoa); font:800 italic 22px var(--display)}
+  .medalha b{display:block; font-family:var(--display); font-size:19px; font-style:italic}
+  .medalha small{color:var(--nevoa); font-size:13px}
+  .medalha.prox small{color:var(--sol); font-weight:700}
+  .conq-linha{display:flex; gap:14px; align-items:center; background:var(--noite); border-radius:12px; padding:10px 14px; margin-bottom:8px}
+  .conq-linha img, .conq-linha .ph-rec{height:84px; width:auto; flex:none}
+  .ph-rec{width:84px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff3b0,#e0a92a 55%,#7a4e06); display:flex; align-items:center; justify-content:center; font-size:40px; box-shadow:0 0 0 4px rgba(245,181,46,.35)}
+  .conq-linha p{margin:2px 0 0; color:var(--nevoa); font-size:14px}
+  #seloModal img{display:block; width:min(300px,70vw); height:auto; margin:4px auto 10px}
+  #seloModal .conteudo{padding:0 20px 20px; text-align:center}
+  #seloModal p{color:var(--nevoa); margin:4px 0}
   .conexao{display:inline-flex; align-items:center; gap:7px; margin-top:8px; padding:3px 11px 3px 9px; border-radius:999px;
     font-size:12.5px; font-weight:700; letter-spacing:.06em; color:var(--nevoa); background:rgba(7,26,46,.55); border:1px solid var(--linha)}
   .conexao i{width:8px; height:8px; border-radius:50%; background:var(--nevoa)}
@@ -262,6 +290,7 @@
     .categorias{grid-template-columns:repeat(2,1fr)}
     .esconde-celular{display:none}
     .so-celular{display:inline}
+    .linha2{display:flex; margin:4px 0 0}
     header{flex-wrap:wrap}
     header > div{flex:1; min-width:0}
     header h1{font-size:30px}
@@ -401,6 +430,7 @@
         <button role="tab" aria-selected="false" data-adm="rampas">Rampas</button>
         <button role="tab" aria-selected="false" data-adm="ea">Espaço aéreo</button>
         <button role="tab" aria-selected="false" data-adm="records">Records</button>
+        <button role="tab" aria-selected="false" data-adm="selos">Selos</button>
         <button role="tab" aria-selected="false" data-adm="temporada">Temporada</button>
       </div>
 
@@ -479,6 +509,28 @@
         <div class="tabela" id="recAtuais"><div class="vazio">Carregando…</div></div>
       </div>
 
+      <div class="adm-aba" id="adm-selos" hidden>
+        <div class="painel">
+          <h2>Candidatos a Piloto Reabilitado</h2>
+          <p class="dica">Pilotos que tiveram invasão de espaço aéreo e depois fizeram 3 voos seguidos sem invasão. O selo vale por 30 dias e cai sozinho se o piloto invadir de novo nesse período.</p>
+          <div id="selCandidatos"><div class="vazio">Carregando…</div></div>
+        </div>
+        <div class="painel">
+          <h2>Conceder selo</h2>
+          <div class="adm-form" style="grid-template-columns:1.6fr 1fr 1fr">
+            <div class="nome-novo"><label for="selPiloto">Piloto</label><select id="selPiloto"></select></div>
+            <div><label for="selTipo">Selo</label><select id="selTipo"><option value="recordista">Recordista (vitalício)</option><option value="reabilitado">Piloto Reabilitado (30 dias)</option></select></div>
+            <div><label for="selData">Data</label><input type="date" id="selData" style="font:15px var(--corpo); color:var(--neve); background:var(--noite); border:1px solid var(--linha); border-radius:10px; padding:10px; width:100%"></div>
+          </div>
+          <label for="selObs">Observação (aparece para os pilotos)</label>
+          <input type="text" id="selObs" placeholder="Ex.: Record do Morro do Cal, 178,5 km" autocomplete="off">
+          <button class="btn" id="selConceder">Conceder selo</button>
+          <div class="aviso" id="selAviso"></div>
+          <p class="dica" style="margin-top:12px">As medalhas de distância (50 a 350 km) são automáticas: aparecem sozinhas conforme os voos da temporada.</p>
+        </div>
+        <div class="tabela" id="selLista"><div class="vazio">Carregando…</div></div>
+      </div>
+
       <div class="adm-aba" id="adm-temporada" hidden>
         <div class="painel">
           <h2>Encerrar temporada</h2>
@@ -517,9 +569,17 @@
     </div>
   </section>
 
-  <p class="rodape"><span id="textoRegra">Ranking: soma dos 7 melhores voos de cada piloto, com no máximo 2 por rampa.</span><br>Desenvolvido por Arthur Grandini Rodella (Tutu) · <a href="#admin" id="linkAdmin">Área do organizador</a></p>
+  <p class="rodape"><span id="textoRegra">Ranking: soma dos 7 melhores voos de cada piloto, com no máximo 2 por rampa.</span><br>Desenvolvido por Arthur Grandini Rodella (Tutu) · versão 1.1 · <a href="#admin" id="linkAdmin">Área do organizador</a></p>
 </div>
 
+<dialog id="conqModal" aria-labelledby="conqTitulo">
+  <div class="modal-topo"><div><h2 id="conqTitulo"></h2><p id="conqSub"></p></div><button class="fechar" data-fechar aria-label="Fechar">×</button></div>
+  <div class="conteudo" id="conqConteudo"></div>
+</dialog>
+<dialog id="seloModal" aria-labelledby="seloTitulo">
+  <div class="modal-topo"><div><h2 id="seloTitulo">Piloto Reabilitado</h2></div><button class="fechar" data-fechar aria-label="Fechar">×</button></div>
+  <div class="conteudo" id="seloConteudo"></div>
+</dialog>
 <dialog id="modal" aria-labelledby="modalTitulo">
   <div class="modal-topo">
     <div><h2 id="modalTitulo"></h2><p id="modalSub"></p></div>
@@ -575,6 +635,75 @@ const pts = v => +(modelo === "elipsoide" ? v.pontos_elips : v.pontos_esfera);
 const km = v => +(modelo === "elipsoide" ? v.dist_elips_km : v.dist_esfera_km);
 
 // ---------- ranking ----------
+
+// ======================= SELOS E CONQUISTAS =======================
+const NIVEIS_KM = [50, 100, 150, 200, 250, 300, 350];
+const IMG_KM = { 50: "selos/50.webp", 100: "selos/100.webp", 150: "selos/150.webp", 200: "selos/200.webp", 250: "selos/250.webp", 300: "selos/300.webp" };  // 350: imagem ainda não definida
+const DIAS_REAB = 30;
+let conquistas = [];
+const hojeISO = () => new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
+const somaDias = (iso, d) => new Date(Date.parse(iso + "T12:00:00Z") + d * 864e5).toISOString().slice(0, 10);
+const mesmoNome = (a, b) => normalNome(a) === normalNome(b);
+function normalNome(t) { return String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toUpperCase(); }
+
+// situação de um selo de Piloto Reabilitado: ativo, expirado ou perdido por invasão
+function situacaoReab(c, invasoes) {
+  const fim = somaDias(c.concedido_em, DIAS_REAB);
+  const inv = invasoes.filter(d => d >= c.concedido_em).sort()[0];
+  if (inv && inv <= fim) return { ativo: false, texto: `Perdido por invasão em ${dataBR(inv)}` };
+  if (hojeISO() > fim) return { ativo: false, texto: `Expirou em ${dataBR(fim)}` };
+  return { ativo: true, fim, texto: `Válido até ${dataBR(fim)}` };
+}
+function invasoesPublicas(nome) {   // datas dos voos com invasão do piloto, na temporada aberta
+  return excluidos.filter(v => v.ea_status === "invadido" && mesmoNome(pil(v.piloto_id)?.nome, nome)).map(v => v.data_voo);
+}
+function reabAtivo(nome) {
+  if (modoSalvo || temporada !== temporadaAberta) return null;
+  const c = conquistas.filter(x => x.tipo === "reabilitado" && mesmoNome(x.piloto_nome, nome)).sort((a, b) => b.concedido_em.localeCompare(a.concedido_em))[0];
+  if (!c) return null;
+  const s = situacaoReab(c, invasoesPublicas(nome));
+  return s.ativo ? { ...c, ...s } : null;
+}
+function melhorVoo(p) {
+  return todosVoos.filter(v => mesmoNome(pil(v.piloto_id)?.nome, p.nome)).sort((a, b) => km(b) - km(a))[0] || null;
+}
+function contarConquistas(p) {
+  const mv = melhorVoo(p), k = mv ? km(mv) : 0;
+  return NIVEIS_KM.filter(n => k >= n).length + conquistas.filter(c => c.tipo === "recordista" && mesmoNome(c.piloto_nome, p.nome)).length + (reabAtivo(p.nome) ? 1 : 0);
+}
+function abrirSeloReab(nome) {
+  const r = reabAtivo(nome); if (!r) return;
+  $("seloConteudo").innerHTML = `<img src="selos/reabilitado.webp" alt="Selo Piloto Reabilitado">
+    <p><b style="color:var(--neve)">${esc(nome)}</b></p>
+    <p>3 voos seguidos sem invasão de espaço aéreo.</p>
+    <p>Concedido em ${dataBR(r.concedido_em)}. ${r.texto}.</p>
+    ${r.observacao ? `<p>${esc(r.observacao)}</p>` : ""}`;
+  $("seloModal").showModal();
+}
+function abrirConquistas(p) {
+  const mv = melhorVoo(p), k = mv ? km(mv) : 0;
+  const prox = NIVEIS_KM.find(n => k < n);
+  const meds = NIVEIS_KM.map(n => {
+    const ganhou = k >= n, img = IMG_KM[n];
+    const fig = img ? `<img src="${img}" alt="Desafio ${n} km">` : `<div class="ph">${n}</div>`;
+    const leg = ganhou ? `<small>Conquistada</small>` : n === prox ? `<small>Faltam ${num(n - k, 1)} km</small>` : `<small>Bloqueada</small>`;
+    return `<div class="medalha ${ganhou ? "" : "bloq"} ${n === prox ? "prox" : ""}">${fig}<b>${n} km</b>${leg}</div>`;
+  }).join("");
+  const recs = conquistas.filter(c => c.tipo === "recordista" && mesmoNome(c.piloto_nome, p.nome));
+  const reab = reabAtivo(p.nome);
+  $("conqTitulo").textContent = p.nome;
+  $("conqSub").textContent = mv ? `Maior voo em ${temporada}: ${num(k, 1)} km OLC, ${nomeRampa(mv)}, ${dataBR(mv.data_voo)}` : `Nenhum voo válido em ${temporada}`;
+  $("conqConteudo").innerHTML = `
+    ${recs.length || reab ? `<div class="conq-sec"><h3>Selos</h3>
+      ${recs.map(c => `<div class="conq-linha"><div class="ph-rec" aria-hidden="true">🏆</div><div><b>Recordista</b><p>${esc(c.observacao || "Recordista de rampa do XC Paraná")}</p><p>Desde ${dataBR(c.concedido_em)}, vitalício</p></div></div>`).join("")}
+      ${reab ? `<div class="conq-linha"><img src="selos/reabilitado.webp" alt=""><div><b>Piloto Reabilitado</b><p>3 voos seguidos sem invasão de espaço aéreo</p><p>${reab.texto}</p></div></div>` : ""}
+    </div>` : ""}
+    <div class="conq-sec"><h3>Desafios de distância, temporada ${temporada}</h3><div class="medalhas">${meds}</div></div>`;
+  $("conqModal").showModal();
+}
+document.querySelectorAll("[data-fechar]").forEach(b => b.addEventListener("click", () => b.closest("dialog").close()));
+document.querySelectorAll("#conqModal, #seloModal").forEach(d => d.addEventListener("click", e => { if (e.target === d) d.close(); }));
+
 function desenharRanking() {
   const porPiloto = new Map();
   for (const v of contam) {
@@ -590,12 +719,13 @@ function desenharRanking() {
     const med = ["🥇", "🥈", "🥉"][pos - 1];
     return `<tr class="piloto" tabindex="0" aria-expanded="false" data-id="${l.p.id}">
       <td class="pos">${med ? `<span class="med" aria-label="${pos}º">${med}</span>` : pos}</td>
-      <td><span class="nome ${l.p.sexo === "F" ? "f" : ""}">${esc(l.p.nome)}</span><span class="seta" aria-hidden="true">›</span><span class="cat so-celular"><br>${l.p.categoria}</span></td>
+      <td><span class="nome ${l.p.sexo === "F" ? "f" : ""}">${esc(l.p.nome)}</span><span class="seta" aria-hidden="true">›</span><div class="linha2"><span class="cat so-celular">${l.p.categoria}</span>${reabAtivo(l.p.nome) ? `<button class="selo-mini" data-reab="${esc(l.p.nome)}" title="Piloto Reabilitado" aria-label="Selo Piloto Reabilitado"><img src="selos/reabilitado.webp" alt=""></button>` : ""}</div></td>
       <td class="cat esconde-celular">${l.p.categoria}</td>
       <td class="num esconde-celular">${l.voos.length}/${regra.total}</td>
       <td class="num total">${num(l.total)}</td></tr>`;
   }).join("");
   $("tabRanking").innerHTML = `<table><thead><tr><th class="pos">#</th><th>Piloto</th><th class="esconde-celular">Cat.</th><th class="num esconde-celular">Voos</th><th class="num">Pontos</th></tr></thead><tbody>${corpo}</tbody></table>`;
+  $("tabRanking").querySelectorAll("[data-reab]").forEach(b => b.addEventListener("click", e => { e.stopPropagation(); abrirSeloReab(b.dataset.reab); }));
   $("tabRanking").querySelectorAll("tr.piloto").forEach(tr => {
     const abrir = () => alternarPiloto(tr, porPiloto.get(+tr.dataset.id));
     tr.addEventListener("click", abrir);
@@ -617,12 +747,14 @@ function alternarPiloto(tr, info) {
       <td class="num esconde-celular">${num(v.linha_reta_km, 1)}</td>
       <td class="num esconde-celular">${num(km(v), 1)}</td><td class="num"><b>${num(pts(v))}</b></td></tr>`;
   const det = document.createElement("tr"); det.className = "detalhe";
-  det.innerHTML = `<td colspan="5"><table class="voos">
+  const nConq = contarConquistas(info.p);
+  det.innerHTML = `<td colspan="5"><button class="btn-conq" data-conq>🏅 Conquistas <b>${nConq}</b></button><table class="voos">
       <thead><tr><th>Data</th><th>Rampa</th><th class="esconde-celular">Tipo</th><th class="num esconde-celular">Dur.</th><th class="num esconde-celular">L. reta</th><th class="num esconde-celular">OLC km</th><th class="num">Pontos</th></tr></thead>
       <tbody>${info.voos.sort((a, b) => b.pontos - a.pontos).map(v => linha(v, true)).join("")}${fora.map(v => linha(v, false)).join("")}</tbody></table>
       ${fora.length ? `<button class="ver-fora" aria-expanded="false">Ver os outros ${fora.length} voo${fora.length > 1 ? "s" : ""} da temporada</button>` : ""}
       <p class="nota">${modoSalvo ? "Temporada encerrada: os traçados dos voos não ficam guardados." : "Toque em um voo para ver no mapa."}</p></td>`;
   tr.after(det);
+  det.querySelector("[data-conq]").addEventListener("click", e => { e.stopPropagation(); abrirConquistas(info.p); });
   const bt = det.querySelector(".ver-fora");
   if (bt) bt.addEventListener("click", e => {
     e.stopPropagation();
@@ -1218,6 +1350,7 @@ async function admConfirmar(session) {
   }
   await admCarregarPilotos();   // os nomes precisam estar prontos antes da lista de voos
   await Promise.all([admCarregarVoos(), admCarregarEA(), admCarregarTemporada(), admCarregarRampas()]);
+  await admCarregarSelos();
   admDesenharRecordsAtuais(); admMostrarAberta();
   return true;
 }
@@ -1344,7 +1477,7 @@ function admDesenharVoos() {
     depois();
   }));
 }
-$("admTemporada").addEventListener("change", admCarregarVoos);
+$("admTemporada").addEventListener("change", async () => { await admCarregarVoos(); if (admConquistas) admDesenharSelos(); });
 $("admFiltro").addEventListener("change", admDesenharVoos);
 $("admBuscaVoo").addEventListener("input", admDesenharVoos);
 
@@ -1506,6 +1639,69 @@ async function admCarregarEA() {
 
 
 
+
+
+// ---------- selos (área do organizador) ----------
+let admConquistas = [];
+async function admCarregarSelos() {
+  const { data, error } = await sb.from("conquistas").select("*").order("concedido_em", { ascending: false });
+  if (error) { $("selLista").innerHTML = `<div class="vazio">Erro ao carregar selos: ${esc(error.message)}</div>`; return; }
+  admConquistas = data;
+  $("selPiloto").innerHTML = admPilotos.filter(p => p.ativo).map(p => `<option>${esc(p.nome)}</option>`).join("");
+  if (!$("selData").value) $("selData").value = hojeISO();
+  admDesenharSelos();
+}
+function admInvasoes(nome) {
+  return admVoos.filter(v => v.ea_status === "invadido" && mesmoNome(admPilotos.find(p => p.id === v.piloto_id)?.nome, nome)).map(v => v.data_voo);
+}
+function admDesenharSelos() {
+  // candidatos: última invasão seguida de 3 ou mais voos válidos, sem selo concedido depois dela
+  const porPiloto = new Map();
+  for (const v of admVoos) { if (v.anulado) continue; (porPiloto.get(v.piloto_id) || porPiloto.set(v.piloto_id, []).get(v.piloto_id)).push(v); }
+  const cands = [];
+  for (const [pid, vs] of porPiloto) {
+    vs.sort((a, b) => (a.data_voo + (a.decolagem_hora || "")).localeCompare(b.data_voo + (b.decolagem_hora || "")));
+    let ult = -1; vs.forEach((v, i) => { if (v.ea_status === "invadido") ult = i; });
+    if (ult < 0) continue;
+    const limpos = vs.length - 1 - ult, nome = admPilotos.find(p => p.id === pid)?.nome || "?";
+    const jaTem = admConquistas.some(c => c.tipo === "reabilitado" && mesmoNome(c.piloto_nome, nome) && c.concedido_em >= vs[ult].data_voo);
+    cands.push({ nome, invasao: vs[ult].data_voo, limpos, jaTem });
+  }
+  cands.sort((a, b) => b.limpos - a.limpos);
+  $("selCandidatos").innerHTML = cands.length ? `<div class="tabela"><table><thead><tr><th>Piloto</th><th>Última invasão</th><th class="num">Voos limpos depois</th><th class="num"></th></tr></thead><tbody>${cands.map(c => `
+    <tr><td class="nome">${esc(c.nome)}</td><td>${dataBR(c.invasao)}</td><td class="num">${c.limpos}</td>
+    <td class="num">${c.jaTem ? `<span class="selo-ativa">Selo concedido</span>` : c.limpos >= 3 ? `<button class="acao" data-dar="${esc(c.nome)}">Conceder</button>` : `<span class="cat">faltam ${3 - c.limpos}</span>`}</td></tr>`).join("")}</tbody></table></div>`
+    : `<div class="vazio" style="padding:12px 0">Nenhum piloto com invasão em ${$("admTemporada").value}.</div>`;
+  $("selCandidatos").querySelectorAll("[data-dar]").forEach(b => b.addEventListener("click", () => concederSelo(b.dataset.dar, "reabilitado", hojeISO(), "")));
+
+  const sit = c => {
+    if (c.tipo === "recordista") return `<span class="estado ok">Vitalício</span>`;
+    const s = situacaoReab(c, admInvasoes(c.piloto_nome));
+    return `<span class="estado ${s.ativo ? "ok" : "anulado"}">${s.ativo ? "Ativo" : "Encerrado"}</span><br><span class="cat">${s.texto}</span>`;
+  };
+  $("selLista").innerHTML = admConquistas.length ? `<table><thead><tr><th>Selo</th><th>Piloto</th><th class="esconde-celular">Data</th><th>Situação</th><th class="num"></th></tr></thead><tbody>${admConquistas.map(c => `
+    <tr data-id="${c.id}"><td>${c.tipo === "recordista" ? "🏆 Recordista" : `<img src="selos/reabilitado.webp" alt="" style="height:28px; vertical-align:middle"> Reabilitado`}${c.observacao ? `<br><span class="cat">${esc(c.observacao)}</span>` : ""}</td>
+    <td class="nome">${esc(c.piloto_nome)}</td><td class="esconde-celular">${dataBR(c.concedido_em)}</td><td>${sit(c)}</td>
+    <td class="num"><button class="acao perigo" data-remover>Remover</button></td></tr>`).join("")}</tbody></table>`
+    : `<div class="vazio">Nenhum selo concedido ainda.</div>`;
+  $("selLista").querySelectorAll("[data-remover]").forEach(b => b.addEventListener("click", async () => {
+    const c = admConquistas.find(x => x.id === +b.closest("tr").dataset.id);
+    if (!confirm(`Remover o selo ${c.tipo === "recordista" ? "Recordista" : "Piloto Reabilitado"} de ${c.piloto_nome}?`)) return;
+    const { error } = await sb.from("conquistas").delete().eq("id", c.id);
+    if (error) return alert("Não foi possível remover: " + error.message);
+    await admCarregarSelos(); conquistas = await rest("conquistas?select=*"); desenharRanking();
+  }));
+}
+async function concederSelo(nome, tipo, data, obs) {
+  limpar($("selAviso"));
+  if (!nome) return aviso($("selAviso"), "Escolha o piloto.", "erro");
+  const { error } = await sb.from("conquistas").insert({ tipo, piloto_nome: nome, concedido_em: data || hojeISO(), observacao: obs || null });
+  if (error) return aviso($("selAviso"), "Não foi possível conceder: " + error.message, "erro");
+  aviso($("selAviso"), `Selo ${tipo === "recordista" ? "Recordista" : "Piloto Reabilitado"} concedido a ${nome}.`, "ok");
+  $("selObs").value = "";
+  await admCarregarSelos(); conquistas = await rest("conquistas?select=*"); desenharRanking();
+}
+$("selConceder").addEventListener("click", () => concederSelo($("selPiloto").value, $("selTipo").value, $("selData").value, $("selObs").value.trim()));
 
 // ---------- rampas ----------
 let rmpLista = [], rmpPlan = null, rmpWb = null;
@@ -1844,15 +2040,17 @@ function contarCategorias(ps) {
 let temporadaLigada = false;
 async function carregarBase() {
   try {
-    const [ps, rs, par, recs, temps0, salvas] = await Promise.all([
+    const [ps, rs, par, recs, temps0, salvas, conqs] = await Promise.all([
       rest("pilotos?select=id,nome,categoria,sexo&ativo=eq.true"),
       rest("rampas?select=id,nome"),
       rest("parametros?select=chave,valor&chave=in.(modelo_distancia,temporada_aberta,voos_no_ranking,voos_por_rampa,voos_por_regiao)"),
       rest("records?select=*&order=distancia_km.desc"),
       rest("voos?select=temporada&anulado=is.false"),
       rest("temporadas_salvas?select=temporada").catch(() => []),
+      rest("conquistas?select=*").catch(() => []),
     ]);
     anosSalvos = [...new Set(salvas.map(t => t.temporada))];
+    conquistas = conqs;
     const temps = [...temps0, ...anosSalvos.map(a => ({ temporada: a }))];
     pilotos = new Map(ps.map(p => [p.id, p])); listaPilotos = [...ps].sort((a, b) => a.nome.localeCompare(b.nome)); rampas = new Map(rs.map(r => [r.id, r.nome]));
     const prm = Object.fromEntries(par.map(x => [x.chave, x.valor]));
