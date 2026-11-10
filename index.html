@@ -569,7 +569,7 @@
     </div>
   </section>
 
-  <p class="rodape"><span id="textoRegra">Ranking: soma dos 7 melhores voos de cada piloto, com no máximo 2 por rampa.</span><br>Desenvolvido por Arthur Grandini Rodella (Tutu) · versão 1.1 · <a href="#admin" id="linkAdmin">Área do organizador</a></p>
+  <p class="rodape"><span id="textoRegra">Ranking: soma dos 7 melhores voos de cada piloto, com no máximo 2 por rampa.</span><br>Desenvolvido por Arthur Grandini Rodella (Tutu) · versão 1.2 · <a href="#admin" id="linkAdmin">Área do organizador</a></p>
 </div>
 
 <dialog id="conqModal" aria-labelledby="conqTitulo">
@@ -869,14 +869,14 @@ document.querySelectorAll("[data-visao]").forEach(b => b.addEventListener("click
 }));
 
 // ---------- carga ----------
-const CAMPOS = "ea_status,ea_detalhes,anulado,anulado_motivo,id,piloto_id,rampa_id,data_voo,tipo_voo,dist_esfera_km,dist_elips_km,pontos_esfera,pontos_elips,decolagem_hora,duracao_s,alt_max_m,ganho_alt_m,linha_reta_km,tracklog_km,pontos_virada,tracado_arquivo,enviado_em";
+const CAMPOS = "ea_status,ea_detalhes,ea_aceito,ea_aceito_motivo,anulado,anulado_motivo,id,piloto_id,rampa_id,data_voo,tipo_voo,dist_esfera_km,dist_elips_km,pontos_esfera,pontos_elips,decolagem_hora,duracao_s,alt_max_m,ganho_alt_m,linha_reta_km,tracklog_km,pontos_virada,tracado_arquivo,enviado_em";
 
 async function carregarTemporada() {
   $("tabRanking").innerHTML = `<div class="vazio">Carregando…</div>`;
   [contam, todosVoos, excluidos] = await Promise.all([
     rest(`ranking_voos?temporada=eq.${temporada}&conta_no_ranking=is.true&select=id,piloto_id,pontos`),
-    rest(`voos?temporada=eq.${temporada}&anulado=is.false&ea_status=eq.ok&select=${CAMPOS}`),
-    rest(`voos?temporada=eq.${temporada}&or=(anulado.is.true,ea_status.eq.invadido)&select=${CAMPOS},ea_status,ea_detalhes,anulado,anulado_motivo&order=data_voo.desc`),
+    rest(`voos?temporada=eq.${temporada}&anulado=is.false&or=(ea_status.eq.ok,ea_aceito.is.true)&select=${CAMPOS}`),
+    rest(`voos?temporada=eq.${temporada}&or=(anulado.is.true,and(ea_status.eq.invadido,ea_aceito.is.false))&select=${CAMPOS}&order=data_voo.desc`),
   ]);
   modoSalvo = false; pilotosSalvos = new Map();
   if (!todosVoos.length && !excluidos.length && anosSalvos.includes(temporada)) {
@@ -1432,7 +1432,7 @@ function admDesenharVoos() {
   const f = $("admBuscaVoo").value.trim().toUpperCase(), filtro = $("admFiltro").value;
   const nomeP = id => admPilotos.find(p => p.id === id)?.nome || "?";
   const lista = admVoos.filter(v => {
-    const exc = v.anulado || v.ea_status === "invadido";
+    const exc = v.anulado || (v.ea_status === "invadido" && !v.ea_aceito);
     if (filtro === "validos" && exc) return false;
     if (filtro === "excluidos" && !exc) return false;
     return !f || nomeP(v.piloto_id).includes(f) || (rampas.get(v.rampa_id) || "").toUpperCase().includes(f);
@@ -1440,6 +1440,7 @@ function admDesenharVoos() {
   if (!lista.length) { $("admTabVoos").innerHTML = `<div class="vazio">Nenhum voo encontrado.</div>`; return; }
   $("admTabVoos").innerHTML = `<table><thead><tr><th>Voo</th><th class="num">Pontos</th><th>Situação</th><th class="num">Ações</th></tr></thead><tbody>${lista.map(v => {
     const estado = v.anulado ? `<span class="estado anulado">Anulado</span><br><span class="cat">${esc(v.anulado_motivo)}</span>`
+      : v.ea_status === "invadido" && v.ea_aceito ? `<span class="estado ok">Aceito</span><br><span class="cat">${esc(v.ea_aceito_motivo || "aceito pelo organizador")}</span>`
       : v.ea_status === "invadido" ? `<span class="estado e-ea">Espaço aéreo</span>` : `<span class="estado ok">Válido</span>`;
     return `<tr data-id="${v.id}">
       <td><span class="nome">${esc(nomeP(v.piloto_id))}</span><br><span class="cat">${dataBR(v.data_voo)}, ${esc(rampas.get(v.rampa_id))}, ${TIPOS[v.tipo_voo]}</span></td>
@@ -1447,6 +1448,7 @@ function admDesenharVoos() {
       <td>${estado}</td>
       <td><div class="acoes">
         <button class="acao" data-ver>Ver</button>
+        ${v.ea_status === "invadido" && !v.anulado ? (v.ea_aceito ? `<button class="acao" data-desaceitar>Desfazer aceite</button>` : `<button class="acao" data-aceitar style="color:var(--vela); border-color:rgba(143,214,64,.5)">Aceitar</button>`) : ""}
         ${v.anulado ? `<button class="acao" data-reativar>Reativar</button>` : `<button class="acao" data-anular>Anular</button>`}
         <button class="acao perigo" data-apagar>Apagar</button>
       </div></td></tr>`;
@@ -1459,6 +1461,21 @@ function admDesenharVoos() {
     if (!motivo || !motivo.trim()) return;
     const { error } = await sb.from("voos").update({ anulado: true, anulado_motivo: motivo.trim() }).eq("id", v.id);
     if (error) return alert("Não foi possível anular: " + error.message);
+    depois();
+  }));
+  $("admTabVoos").querySelectorAll("[data-aceitar]").forEach(b => b.addEventListener("click", async () => {
+    const v = voo(b), motivo = prompt(`Aceitar no ranking o voo de ${nomeP(v.piloto_id)} (${dataBR(v.data_voo)}, ${num(pts(v))} pontos), mesmo com a invasão de espaço aéreo?\n\nEscreva o motivo (fica registrado):`, "Voo feito quando valia outra versão do espaço aéreo");
+    if (motivo === null) return;
+    if (!motivo.trim()) return alert("Escreva o motivo do aceite.");
+    const { error } = await sb.from("voos").update({ ea_aceito: true, ea_aceito_motivo: motivo.trim() }).eq("id", v.id);
+    if (error) return alert("Não foi possível aceitar: " + error.message);
+    depois();
+  }));
+  $("admTabVoos").querySelectorAll("[data-desaceitar]").forEach(b => b.addEventListener("click", async () => {
+    const v = voo(b);
+    if (!confirm(`Desfazer o aceite? O voo de ${nomeP(v.piloto_id)} (${dataBR(v.data_voo)}) volta para "Voos excluídos" por invasão de espaço aéreo.`)) return;
+    const { error } = await sb.from("voos").update({ ea_aceito: false, ea_aceito_motivo: null }).eq("id", v.id);
+    if (error) return alert("Não foi possível desfazer: " + error.message);
     depois();
   }));
   $("admTabVoos").querySelectorAll("[data-reativar]").forEach(b => b.addEventListener("click", async () => {
@@ -1652,7 +1669,7 @@ async function admCarregarSelos() {
   admDesenharSelos();
 }
 function admInvasoes(nome) {
-  return admVoos.filter(v => v.ea_status === "invadido" && mesmoNome(admPilotos.find(p => p.id === v.piloto_id)?.nome, nome)).map(v => v.data_voo);
+  return admVoos.filter(v => v.ea_status === "invadido" && !v.ea_aceito && mesmoNome(admPilotos.find(p => p.id === v.piloto_id)?.nome, nome)).map(v => v.data_voo);
 }
 function admDesenharSelos() {
   // candidatos: última invasão seguida de 3 ou mais voos válidos, sem selo concedido depois dela
@@ -1661,7 +1678,7 @@ function admDesenharSelos() {
   const cands = [];
   for (const [pid, vs] of porPiloto) {
     vs.sort((a, b) => (a.data_voo + (a.decolagem_hora || "")).localeCompare(b.data_voo + (b.decolagem_hora || "")));
-    let ult = -1; vs.forEach((v, i) => { if (v.ea_status === "invadido") ult = i; });
+    let ult = -1; vs.forEach((v, i) => { if (v.ea_status === "invadido" && !v.ea_aceito) ult = i; });
     if (ult < 0) continue;
     const limpos = vs.length - 1 - ult, nome = admPilotos.find(p => p.id === pid)?.nome || "?";
     const jaTem = admConquistas.some(c => c.tipo === "reabilitado" && mesmoNome(c.piloto_nome, nome) && c.concedido_em >= vs[ult].data_voo);
